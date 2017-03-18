@@ -1,5 +1,3 @@
-
-
 import pandas as pd
 
 
@@ -22,9 +20,14 @@ def extract_species(x):
     return list(filter(lambda x: len(x)>0, alist))
 
 
+res=[]
 for ind, row in data.iterrows():
     #if not pd.isnull(row['comment']):
     #    res = extract_species(row['comment'])
     #    print(ind, res)
-    if not pd.isnull(row['species']):
-        pass
+    res.append(len(str(row['ecology'])))
+
+
+
+print(pd.np.argsort(res))
+print(pd.np.array(res)[pd.np.argsort(res)])    
