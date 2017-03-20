@@ -153,6 +153,7 @@ class PDF_DOC:
         self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
         au_w = self.pdf.get_string_width(author_name)
         x_pos = LABEL_WIDTH / 2 - (au_w + sp_w + 2) / 2
+        scaled = False
         if x_pos > PADDING_X:
             self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
             self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
@@ -172,6 +173,7 @@ class PDF_DOC:
             self.pdf.cell(0, 0, author_name)
             LINE_HEIGHT *= LINE_SCALE
             self._ln += 1
+            scaled = True
         # ----------------------------------------------
 
 
@@ -230,7 +232,7 @@ class PDF_DOC:
                 inter = INTERSPACE + SMALL_FONT_SIZE/3.0
             else:
                 inter = 0
-            for line in prepare[1:5]:
+            for line in prepare[1:3 if scaled else 4]:
                 self._ln += 1
                 self.pdf.set_xy(x + PADDING_X + 2, self.goto(y, self._ln, inter=inter))
                 self.pdf.cell(0, 0, line)
