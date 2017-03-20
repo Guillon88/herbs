@@ -31,7 +31,6 @@ LABEL_WIDTH = 140
 LABEL_HEIGHT = 100
 
 FIRST_LINE = LABEL_HEIGHT/7
-global LINE_HEIGHT
 LINE_HEIGHT = LABEL_HEIGHT/16
 LINE_SCALE = 0.85
 PADDING_X = 3
@@ -94,17 +93,18 @@ class PDF_DOC:
         self.pdf.set_auto_page_break(0, 0)
         self.pdf.add_page()
         self._ln = 0
+        self.lnhght = LINE_HEIGHT
+
 
     def goto(self, y, n, inter=0):
-        return  y + PADDING_Y + (LINE_HEIGHT + INTERSPACE) * n + inter
+        return  y + PADDING_Y + (self.lnhght + INTERSPACE) * n + inter
 
     def _add_label(self, x, y, family='', species='', spauth='',
                    date='', latitude='', longitude='',
                    place='', country='', region='', collected='',
                    altitude='', identified='', number='', itemid='', fieldid='',
                    acronym='', institute='', address='', gform=''):
-        global LINE_HEIGHT
-        self.pdf.rect(x, y, LABEL_WIDTH,LABEL_HEIGHT, '')
+        self.pdf.rect(x, y, LABEL_WIDTH, LABEL_HEIGHT, '')
         self.pdf.set_xy(x + PADDING_X, y + PADDING_Y)
         self.pdf.image(BGI_LOGO_IMG, w=LOGO_WIDTH, h=LOGO_HEIGHT)
 
@@ -171,7 +171,7 @@ class PDF_DOC:
             self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
             self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
             self.pdf.cell(0, 0, author_name)
-            LINE_HEIGHT *= LINE_SCALE
+            self.lnhght *= LINE_SCALE
             self._ln += 1
             scaled = True
         # ----------------------------------------------
@@ -228,7 +228,7 @@ class PDF_DOC:
             self.pdf.set_xy(x + PADDING_X + 2 + tw, self.goto(y, self._ln))
             self.pdf.cell(0, 0, prepare[0])
             if len(prepare) > 3:
-                LINE_HEIGHT *= LINE_SCALE
+                self.lnhght *= LINE_SCALE
                 inter = INTERSPACE + SMALL_FONT_SIZE/3.0
             else:
                 inter = 0
@@ -239,7 +239,7 @@ class PDF_DOC:
 
        # ----------------------------------------------
         # ------------- Altitude info ------------------
-        self._ln += 1  if len(prepare) < 3 else 2
+        self._ln += 1
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
         self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
         tw = self.pdf.get_string_width(msgs['alt'])
@@ -323,7 +323,6 @@ class PDF_DOC:
         # ----------------------------------------------
 
         # ------------ Catalogue number ----------------
-        if len(prepare)>2: LINE_HEIGHT /= LINE_SCALE
         dfs = TITLE_FONT_SIZE + 2
         idtoprint = 'ID: %s/%s' % (number, itemid)
         if fieldid:
