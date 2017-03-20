@@ -46,7 +46,7 @@ def suggest_species(sp, syns=syns, vbgi=vbgitaxa, main=frame):
 
     splitted = sp.split()
     if len(splitted)>1:
-        if any((main['Genus'] == splitted[0].strip())&(main['Species'] == splitted[1].strip())):
+        if any((main['Genus'] == splitted[0].strip()) & (main['Species'] == splitted[1].strip())):
             return True
     elif len(splitted)==1:
         return any(main['Genus']==splitted[0].strip())
@@ -93,7 +93,7 @@ for ind, row in data.iterrows():
                what = ' '.join(item.strip().lower().split()[:2])
                rc = suggest_species(what)
                if rc is None:
-                    print('(Comment)', ind+2, item)
+                    print('(Comment)', ind + 2, item)
                     notfound.append(what)
     if not pd.isnull(row['species']):
         res = suggest_species(row['species'].strip().lower())
@@ -101,4 +101,4 @@ for ind, row in data.iterrows():
             print('(Species)', ind+2, row['species'])
             notfound.append(row['species'].lower().strip())
             
-print("\nUnique species wasn't found, total:", len(list(pd.np.unique(notfound))))
+print("\nUnique species, total:", len(list(pd.np.unique(notfound))))

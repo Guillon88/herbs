@@ -1229,4 +1229,4 @@
 (Species) 17990 Pedinophyllum iterruptum
 (Species) 18006 Solenostoma cf. pyriflorum
 
-Unique species wasn't found, total: 363
+Unique species, total: 363
