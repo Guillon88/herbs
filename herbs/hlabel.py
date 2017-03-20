@@ -170,7 +170,8 @@ class PDF_DOC:
             self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
             self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
             self.pdf.cell(0, 0, author_name)
-
+            LINE_HEIGHT *= LINE_SCALE
+            self._ln += 1
         # ----------------------------------------------
 
 
@@ -224,12 +225,12 @@ class PDF_DOC:
                 prepare.append(' '.join(cline))
             self.pdf.set_xy(x + PADDING_X + 2 + tw, self.goto(y, self._ln))
             self.pdf.cell(0, 0, prepare[0])
-            if len(prepare) > 2:
+            if len(prepare) > 3:
                 LINE_HEIGHT *= LINE_SCALE
                 inter = INTERSPACE + SMALL_FONT_SIZE/3.0
             else:
                 inter = 0
-            for line in prepare[1:3]:
+            for line in prepare[1:5]:
                 self._ln += 1
                 self.pdf.set_xy(x + PADDING_X + 2, self.goto(y, self._ln, inter=inter))
                 self.pdf.cell(0, 0, line)
