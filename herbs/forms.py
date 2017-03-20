@@ -103,6 +103,7 @@ class HerbItemForm(forms.ModelForm):
                 self._errors['public'].append(_('публиковать можно только при непустом уникальном коде образца'))
             if sp:
                 if sp.status not in ['A', 'P']:
+                    #TODO: This should be broadcast error
                     self._errors.setdefault('species', ErrorList())
                     self._errors['species'].append(_('вид не одобрен куратором; опубликовать можно только одобренные виды'))
         return formdata
