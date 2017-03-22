@@ -60,13 +60,13 @@ def suggest_species(sp, syns=syns, vbgi=vbgitaxa, main=frame):
         return (sp[0], 'sp.', '')
 
     if _sp[1] == 'cf.' or _sp[1] == 'cf':
-        return (_sp[0], _sp[2], ' '.join(_sp[3:]) if (len(_sp) >= 4) else (_sp[0], _sp[2], '')
+        return (_sp[0], _sp[2], ' '.join(_sp[3:]) if (len(_sp) >= 4) else (_sp[0], _sp[2], ''))
 
     if _sp[1] == 'sp' or _sp[1] == 'sp.':
         return (_sp[0], 'sp.', '')
     # --------------------------------------------------
 
-    authorship = ' '.join(_sp[2:]) if len(_sp) >= 3 else: ''
+    authorship = ' '.join(_sp[2:]) if len(_sp) >= 3 else ''
     if len(_sp) >= 2:
         if any((main['Genus'] == _sp[0]) & (main['Species'] == _sp[1])) & (main['Authorship'] == authorship):
             return  (_sp[0], _sp[1], authorship)
