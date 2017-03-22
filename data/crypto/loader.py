@@ -44,13 +44,23 @@ def suggest_species(sp, syns=syns, vbgi=vbgitaxa, main=frame):
     _vbgi = vbgi.copy()
     _vbgi = vbgi.applymap(str.lower)
 
-    splitted = sp.split()
-    if len(splitted)>1:
-        if any((main['Genus'] == splitted[0].strip()) & (main['Species'] == splitted[1].strip())):
-            return True
-    elif len(splitted)==1:
-        return any(main['Genus']==splitted[0].strip())
-    
+    # ------------ Preliminary evaluations ------------
+    _sp = sp.split()
+    if len(_sp) == 1:
+        return (sp[0], 'sp.', '')
+
+    if _sp[1] == 'aff.' or _sp[1] == 'aff':
+        return (sp[0], 'sp.', '')
+
+    if _sp[1] == 'cf.' or _sp[1] == 'cf':
+        return (_sp[0], _sp[2], ' '.join(_sp[3:]) if (len(_sp) >= 4) else (_sp[0], _sp[2], '')
+    # --------------------------------------------------
+
+    authorship = ' '.join(_sp[2:]) if len(_sp) >= 3 else: ''
+    if len(_sp) >= 2:
+        if any((main['Genus'] == _sp[0]) & (main['Species'] == _sp[1])):
+            return  (_sp[0], _sp[1], authorship)
+
     ix = _syns['current'].map(lambda x: x.startswith(sp))
     filtered = syns[ix]
     if len(filtered) >= 1:
@@ -70,7 +80,7 @@ def suggest_species(sp, syns=syns, vbgi=vbgitaxa, main=frame):
     vfiltered = vbgi[vbgix]
     if len(vfiltered) >= 1:return vfiltered.iloc[0]['current']
 
-    
+
     return None
 
 
@@ -100,5 +110,5 @@ for ind, row in data.iterrows():
         if res is None:
             print('(Species)', ind+2, row['species'])
             notfound.append(row['species'].lower().strip())
-            
+
 print("\nUnique species, total:", len(list(pd.np.unique(notfound))))
