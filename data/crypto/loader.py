@@ -88,17 +88,17 @@ def suggest_species(sp, syns=syns, vbgi=vbgitaxa):
     nix = _syns['approved'].map(lambda x: x.startswith(sp))
     nfiltered = syns[nix]
     if len(nfiltered) == 1:
-        return split_species(nfiltered.iloc[0]['approved'])
+        return (split_species(nfiltered.iloc[0]['approved']), 0)
     elif len(nfiltered) > 1:
-        return split_species(nfiltered.iloc[0]['approved'], len(nfiltered))
+        return (split_species(nfiltered.iloc[0]['approved']), len(nfiltered))
 
     vbgix = _vbgi['current'].map(lambda x: x.startswith(sp))
     vfiltered = vbgi[vbgix]
     if len(vfiltered) == 1:
-        return split_species(vfiltered.iloc[0]['current'])
+        return (split_species(vfiltered.iloc[0]['current']), 0)
     elif len(vfiltered) > 1:
         return (split_species(vfiltered.iloc[0]['current']), len(vfiltered))
-    return split_species(sp)
+    return (split_species(sp), 0)
 
 def extract_species(x):
     ns = x.replace('together with', '').strip()
@@ -185,15 +185,52 @@ def evaluate_row(row):
 
     #Get region
     _country = country.lower()
-    rr = row['label'].lower().replace(_country + ' ','').replace(_country + '.','').replace(_country + ',','')
-    region = rr.split('.')[0].capitalize().strip() if len(rr.split('.')[0]) < 150 else  ''
-    if not region:
-        region = rr.split(',')[0].capitalize().strip() if len(rr.split(',')[0])<150 else ''
-    result.update({'region': region})
+    final = []
+    region = ''
+    if row['label']:
+        rr = row['label'].split('.')
+        res = []
+        for item in rr:
+            res.append(item.split(','))
+        prepared = []
+        for item in res:
+            if isinstance(item, list):
+                for el in item:
+                    if el.lower() == _country:
+                        item.remove(el)
+                _it = []
+                for x in item:
+                    if x.strip():
+                        _it.append(x.strip())
+                prepared.append(_it)
+            else:
+                if item.strip().lower() == _country:
+                    res.remove(item)
+                else:
+                    prepared.append(item.strip())
 
-    splitted = ','.join(map(str.capitalize, rr.split(',')))
-    splitted = '.'.join(map(str.capitalize, splitted.split('.')))
-    tonote += splitted
+        for item in prepared:
+             if not region:
+                 if isinstance(item, list):
+                     for s in item:
+                         if len(s.strip()) >3:
+                             region = s.strip()
+                             item.remove(s)
+                             break
+                 elif len(item) > 3:
+                     region = item.strip()
+                     prepared.remove(item)
+             _aux = ''
+             if isinstance(item, list) and len(item)>0:
+                 _aux = ', '.join(map(str.strip, item))
+                 final.append(_aux)
+             elif isinstance(item, str):
+                 _aux = item
+                 if region != _aux.strip():
+                     final.append(_aux.strip())
+    final = '. '.join(final)
+    result.update({'region': region})
+    tonote += final
 
     if row['collected']:
         try:
