@@ -1,10 +1,24 @@
+ # -*- coding: utf-8 -*-
+from __future__ import print_function
+import sys, os
+
+sys.path.append('/home/scidam/webapps/bgicms242/bgi')
+os.environ['DJANGO_SETTINGS_MODULE']='bgi.settings'
+
+from .countries import *
+from ..models import Family, Genus, Species, Country, HerbItem
+from ..utils import  create_safely
+
 import pandas as pd
 import datetime, calendar
 import re
+from geoposition import Geoposition
+
+CDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 
-data = pd.read_excel('todb.xlsx')
+data = pd.read_excel(os.path.join(CDIR, 'todb.xlsx'))
 data = data.astype(pd.np.object)
 
 new =data.astype(str)['colnum'].map(str.strip).map(str.lower)
@@ -14,31 +28,16 @@ print(data.info())
 
 
 
-syns = pd.read_excel('syns.xlsx')
+syns = pd.read_excel(os.path.join(CDIR, 'syns.xlsx'))
 syns = syns.astype(pd.np.object)
 
 syns = syns.applymap(str.strip)
 
 
-vbgitaxa = pd.read_excel('vbgitaxa.xlsx')
+vbgitaxa = pd.read_excel(os.path.join(CDIR, 'vbgitaxa.xlsx'))
 vbgitaxa = vbgitaxa.astype(pd.np.object)
 vbgitaxa = vbgitaxa.applymap(str.strip)
 
-
-# ====== Load all csv files ==========
-
-
-#allFiles = glob.glob("./*.csv")
-#frame = pd.DataFrame()
-#list_ = []
-#for file_ in allFiles:
-#    df = pd.read_csv(file_)
-#    list_.append(df)
-#frame = pd.concat(list_)
-#frame = frame.astype(str)
-#frame = frame.applymap(str.lower)
-
-#----- End of the theplantlist db ------
 
 
 
@@ -50,6 +49,7 @@ def split_species(sp):
         return _sp[0], _sp[1], ''
     elif len(_sp) >= 3:
         return _sp[0], _sp[1], ' '.join(_sp[2:])
+
 
 def suggest_species(sp, syns=syns, vbgi=vbgitaxa):
     _syns = syns.copy()
@@ -108,7 +108,7 @@ def extract_species(x):
 
 def parse_month(ss):
     try:
-        res = re.findall('\.(\d\d)\.')[0]
+        res = int(re.findall('\.(\d\d)\.', ss)[0])
     except:
         res = ''
     return res
@@ -116,7 +116,7 @@ def parse_month(ss):
 
 def parse_year(ss):
     try:
-        res = re.findall('\.(\d\d\d\d)\.')[0]
+        res = int(re.findall('(\d\d\d\d)', ss)[0])
     except:
         res = ''
     return res
@@ -137,8 +137,8 @@ def evaluate_row(row):
               'identifiedby': '',
               'altitude': None,
               'itemcode': None,
-              'lat':None,
-              'lon':None,
+              'lat': '',
+              'lon': '',
               'note': ''
               }
     tonote = ''
@@ -246,15 +246,16 @@ def evaluate_row(row):
        m = parse_month(row['determined'])
        y = parse_year(row['determined'])
        if y:
-           sd = datetime.date(year=y, m=1, d=1)
-           ed = datetime.date(year=y, m=12, d=calendar.monthrange(year=y, month=12)[1])
+           sd = datetime.date(year=y, month=1, day=1)
+           ed = datetime.date(year=y, month=12, day=31)
        if m:
-           sd.month = m
-           ed.month = m
-           ed.day = calendar.monthrange(year=y, month=m)[1]
+           if isinstance(sd, datetime.date):
+               sd = sd.replace(month=m)
+           if isinstance(ed, datetime.date):
+               ed = ed.replace(month=m, day=calendar.monthrange(year=y, month=m)[1])
     if ed or sd:
-       result.update({'collected_s': sd})
-       result.update({'collected_e': ed})
+       result.update({'identified_s': sd})
+       result.update({'identified_e': ed})
 
     # filling additionals
     adds = []
@@ -268,7 +269,55 @@ def evaluate_row(row):
     return result
 
 
+
+
+# -------------------- Main function: Data loading -------------------
 for ind, row in data.iterrows():
-    print('\n'+'='*100)
-    print(ind, evaluate_row(row))
-    print('='*100+'\n')
+    print('Evaluating ind:', ind)
+    row_data = evaluate_row(row)
+    tonote = row_data['note']
+    
+    # -------- species loading --------
+    genus = row_data['species'][0][0].lower().strip()
+    species = row_data['species'][0][1].lower().strip()
+    authorship = row_data['species'][0][2].strip()
+    
+    if row_data['species'][1] > 0:
+        tonote += '[Sp. ambig. %s]' % row_data['species'][1]
+    
+    genobj = create_safely(Genus, ('name',), (genus, ), postamble='')
+    spobj = create_safely(Species, ('name', 'genus', 'authorship'), (species, genobj, authorship), postamble='')
+    
+    herbitem = HerbItem(species=spobj,
+                        region=row_data['region'],
+                        fieldid=row_data['fieldid'],
+                        itemcode=row_data['itemcode'],
+                        altitude=str(row_data['altitude']),
+                        collectedby=row_data['collectedby'],
+                        identifiedby=row_data['identifiedby'],
+                        detailed=row_data['detailed'],
+                        user=,
+                        acronym=,
+                        note=row_data['note'] + tonote,
+                        )
+    
+    if row_data['lat'] and row_data['lon']:
+        herbitem.coordinates=Geoposition(row_data['lat'], row_data['lon'])
+    if row_data['collected_s']:
+        herbitem.collected_s=row_data['collected_s']
+    if row_data['collected_e']:
+        herbitem.collected_e=row_data['collected_e']
+    if row_data['identified_s']:
+        herbitem.identified_s=row_data['identified_s']
+    if row_data['identified_e']:
+        herbitem.identified_e=row_data['identified_e']       
+        
+        
+    # ----- additionals ----- and country, herbacronym, herbgroup ...
+    
+    
+    
+    
+    
+              
+
