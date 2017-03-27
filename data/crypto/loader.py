@@ -331,7 +331,6 @@ for ind, row in data.iterrows():
             pass
     # ----------------------------------------------
     # save herbitem
-    herbitem.note = row_data['note'] + tonote
     herbitem.save()
     # --------- fill  additionals ----------------
 
@@ -345,4 +344,9 @@ for ind, row in data.iterrows():
         if row_data['identified_s']:
             cur_add.identified_s = row_data['identified_s']
         cur_add.save()
+        spcount = Species.objects.filter(name__iexact=adspecies, genus=adgenobj,
+                                   authorship=adauthor).count()
+        if  spcount > 1:
+            tonote += '[%s: amb.=%s]' %(adspobj.get_full_name(), spcount)
+    herbitem.note = row_data['note'] + tonote
     gc.collect()
