@@ -18,9 +18,8 @@ CDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 
-data = pd.read_excel(os.path.join(CDIR, 'todb.xlsx'))
+data = pd.read_excel(os.path.join(CDIR, 'todb1.xlsx'))
 data = data.astype(pd.np.object)
-print('here i am')
 new = data.astype(unicode)['colnum'].map(lambda x: x.strip()).map(lambda y: y.lower())
 inds = new.map(lambda x: True if 'd#' in x or 'duplicate ex' in x else False)
 data = data[~inds]
@@ -240,7 +239,7 @@ def evaluate_row(row):
         if idents:
             result.update({'collected_s': idents})
 
-    if row['determined']: 
+    if row['determined']:
 	try:
             idents = datetime.datetime.strptime(row['determined'].strip(),'%d.%m.%Y')
         except:
@@ -286,11 +285,11 @@ herbacronym = HerbAcronym.objects.get(name='VBGI')
 
 
 
-#for ind, row in data.iterrows():
-#    row_data = evaluate_row(row)
-#    print(ind,row_data)
-#    if ind>20: break
-#sdfsd
+for ind, row in data.iterrows():
+    row_data = evaluate_row(row)
+    row_data['itemcode'] = '%s' % (318014 + ind)
+    print(ind,row_data)
+sdfsd
 
 
 
