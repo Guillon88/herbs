@@ -51,7 +51,7 @@ for ind, row in syns.iterrows():
 
     try:
         sgenus = Genus.objects.get(name=syn_genus)
-    except (Genus.DoesNotExist, MultipleObjectsReturned):
+    except (Genus.DoesNotExist, Genus.MultipleObjectsReturned):
         print('Genus syn', syn_genus, 'not found')
         continue
     try:
@@ -64,11 +64,11 @@ for ind, row in syns.iterrows():
             continue
     
     if  (syn_species!=cur_species) or (syn_genus!=cur_genus) or (syn_author!=cur_author):
-        sspecies.synonym = cspecies
-        sspecies.save()
+        cspecies.synonym = sspecies
+        cspecies.save()
     else:
-        sspecies.synonym = None
-        sspecies.save()
+        cspecies.synonym = None
+        cspecies.save()
     total+=1
 
 print('Total modified species', total)
