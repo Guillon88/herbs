@@ -99,190 +99,198 @@ def parse_date(d):
     return res
 
 
+def get_data(request):
+    '''Evaluate search query and return data'''
 
+    errors = []
+    warnings = []
+    objects_filtered = Herbitem.objects.none()
 
+    dataform = SearchForm(request.GET)
+    search_by_syns = request.GET.get('syns', False)
+    if search_by_syns == 'true':
+        search_by_syns = True
+    elif search_by_syns == 'false':
+        search_by_syns = False
+    else:
+        search_by_syns = False
+    if dataform.is_valid():
+        data = {}
+        for key in dataform.fields:
+            if hasattr(dataform.cleaned_data[key], 'strip'):
+                data.update({key: dataform.cleaned_data[key].strip()})
+            else:
+                data.update({key: dataform.cleaned_data[key]})
+        bigquery = [Q(public=True)]
+        bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] and not search_by_syns else []
+        bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] and not search_by_syns else []
+        bigquery += [Q(species__name__icontains=data['species'])] if data['species'] and not search_by_syns else []
 
-
-# TODO: Fixes needed: DetHistory added
-@csrf_exempt
-def show_herbs(request):
-    '''
-    Get herbitems view
-    '''
-    if request.method == 'POST':
-        return HttpResponse(_('Допустимы только GET-запросы'))
-
-    context = {'error': '', 'has_previous': None, 'has_next': None,
-               'pagenumber': 1, 'pagecount': 0}
-
-    if request.is_ajax():
-        dataform = SearchForm(request.GET)
-        search_by_syns = request.GET.get('syns', False)
-        if search_by_syns == 'true':
-            search_by_syns = True
-        elif search_by_syns == 'false':
-            search_by_syns = False
-        else:
-            search_by_syns = False
-        if dataform.is_valid():
-            data = {}
-            for key in dataform.fields:
-                if hasattr(dataform.cleaned_data[key], 'strip'):
-                    data.update({key: dataform.cleaned_data[key].strip()})
-                else:
-                    data.update({key: dataform.cleaned_data[key]})
-            bigquery = [Q(public=True)]
-            bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] and not search_by_syns else []
-            bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] and not search_by_syns else []
-            bigquery += [Q(species__name__icontains=data['species'])] if data['species'] and not search_by_syns else []
-
-            # -------- synonyms searching --------------
-            if search_by_syns:
-                try:
-                    species_queryset = Species.objects.filter(genus__name__iexact=data['genus'], name__iexact=data['species']).exclude(status='D')
-                    if species_queryset.exists():
-                        syn_aux = map(lambda x: Q(json_content__contains=',' + '%s' % x + ','),
-                                        species_queryset.values_list('id', flat=True))
-                        intermediate = filter(bool,
-                                              sum([item.json_content.split(',') for item in SpeciesSynonym.objects.filter(reduce(operator.or_, syn_aux))], []))
-                        try:
-                            intermediate =  map(int, intermediate)
-                        except ValueError:
-                            intermediate = []
-                        if intermediate:
-                            bigquery += [Q(species__pk__in=intermediate)]
-                        else:
-                            search_by_syns=False
+        # -------- synonyms searching --------------
+        if search_by_syns:
+            try:
+                species_queryset = Species.objects.filter(genus__name__iexact=data['genus'], name__iexact=data['species']).exclude(status='D')
+                if species_queryset.exists():
+                    syn_aux = map(lambda x: Q(json_content__contains=',' + '%s' % x + ','),
+                                    species_queryset.values_list('id', flat=True))
+                    intermediate = filter(bool,
+                                            sum([item.json_content.split(',') for item in SpeciesSynonym.objects.filter(reduce(operator.or_, syn_aux))], []))
+                    try:
+                        intermediate =  map(int, intermediate)
+                    except ValueError:
+                        intermediate = []
+                    if intermediate:
+                        bigquery += [Q(species__pk__in=intermediate)]
                     else:
-                        search_by_syns = False
-                except Species.DoesNotExist:
+                        search_by_syns=False
+                else:
                     search_by_syns = False
+            except Species.DoesNotExist:
+                search_by_syns = False
 
-            if not search_by_syns:
-                bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] else []
-                bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] else []
-                bigquery += [Q(species__name__icontains=data['species'])] if data['species'] else []
+        if not search_by_syns:
+            bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] else []
+            bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] else []
+            bigquery += [Q(species__name__icontains=data['species'])] if data['species'] else []
 
-            # -------------------------------------------
+        # -------------------------------------------
 
-            if data['itemcode']:
-                try:
-                    intitemcode = int(data['itemcode'])
+        if data['itemcode']:
+            try:
+                intitemcode = int(data['itemcode'])
+                bigquery += [Q(itemcode__icontains=data['itemcode'])|
+                            Q(fieldid__icontains=data['itemcode'])|
+                            Q(id=intitemcode)
+                            ]
+
+            except ValueError:
                     bigquery += [Q(itemcode__icontains=data['itemcode'])|
-                             Q(fieldid__icontains=data['itemcode'])|
-                             Q(id=intitemcode)
-                             ]
+                            Q(fieldid__icontains=data['itemcode'])
+                            ]
 
-                except ValueError:
-                     bigquery += [Q(itemcode__icontains=data['itemcode'])|
-                             Q(fieldid__icontains=data['itemcode'])
-                             ]
+        bigquery += [Q(collectedby__icontains=data['collectedby'])] if data['collectedby'] else []
+        bigquery += [Q(identifiedby__icontains=data['identifiedby'])] if data['identifiedby'] else []
+        if data['country']:
+            bigquery += [Q(country__name_ru__icontains=data['country'])|
+                            Q(country__name_en__icontains=data['country'])]
 
-            bigquery += [Q(collectedby__icontains=data['collectedby'])] if data['collectedby'] else []
-            bigquery += [Q(identifiedby__icontains=data['identifiedby'])] if data['identifiedby'] else []
-            if data['country']:
-                bigquery += [Q(country__name_ru__icontains=data['country'])|
-                             Q(country__name_en__icontains=data['country'])]
+        bigquery += [Q(region__icontains=data['place'])|
+                        Q(detailed__icontains=data['place'])|
+                        Q(district__icontains=data['place'])|
+                        Q(note__icontains=data['place'])] if data['place'] else []
 
-            bigquery += [Q(region__icontains=data['place'])|
-                         Q(detailed__icontains=data['place'])|
-                         Q(district__icontains=data['place'])|
-                         Q(note__icontains=data['place'])] if data['place'] else []
+        # dates
+        if data['colend'] and data['colstart']:
+            colendin = Q(collected_e__gte=data['colstart']) & Q(collected_e__lte=data['colend'])
+            colstartin = Q(collected_s__gte=data['colstart']) & Q(collected_s__lte=data['colend'])
+            bigquery += [colstartin | colendin]
+        elif data['colstart']:
+            bigquery += [Q(collected_s__gte=data['colstart']) | Q(collected_e__gte=data['colstart'])]
+        elif data['colend']:
+            bigquery += [Q(collected_s__lte=data['colend']) | Q(collected_e__lte=data['colend'])]
 
-            # dates
-            if data['colend'] and data['colstart']:
-                colendin = Q(collected_e__gte=data['colstart']) & Q(collected_e__lte=data['colend'])
-                colstartin = Q(collected_s__gte=data['colstart']) & Q(collected_s__lte=data['colend'])
-                bigquery += [colstartin | colendin]
-            elif data['colstart']:
-                bigquery += [Q(collected_s__gte=data['colstart']) | Q(collected_e__gte=data['colstart'])]
-            elif data['colend']:
-                bigquery += [Q(collected_s__lte=data['colend']) | Q(collected_e__lte=data['colend'])]
+        # acronym filtering
+        acronym = request.GET.get('acronym', '')
+        try:
+            acronym = int(acronym)
+            bigquery += [Q(acronym__id=acronym)]
+        except ValueError:
+            pass
 
-            # acronym filtering
-            acronym = request.GET.get('acronym', '')
-            try:
-                acronym = int(acronym)
-                bigquery += [Q(acronym__id=acronym)]
-            except ValueError:
-                pass
+        # subdivision filtering
+        subdivision = request.GET.get('subdivision', '')
+        try:
+            subdivision = int(subdivision)
+            bigquery += [Q(subdivision__id=subdivision)]
+        except ValueError:
+            pass
 
-            # subdivision filtering
-            subdivision = request.GET.get('subdivision', '')
-            try:
-                subdivision = int(subdivision)
-                bigquery += [Q(subdivision__id=subdivision)]
-            except ValueError:
-                pass
+        objects_filtered = HerbItem.objects.filter(reduce(operator.and_,
+                                                            bigquery))
 
-            object_filtered = HerbItem.objects.filter(reduce(operator.and_,
-                                                             bigquery))
-
-
-            if request.GET.get('getcsv', None) and request.user.is_authenticated():
-                writer = csv.writer(EchoCSV(), delimiter=';')
-                csv_response = StreamingHttpResponse((writer.writerow([unicode(s).encode("utf-8") for s in row]) for row in _get_rows_for_csv(object_filtered)), content_type="text/csv")
-                csv_response['Content-Disposition'] = 'attachment; filename=herb_data_%s.csv' % timezone.now().strftime('%Y-%B-%d-%M-%s')
-                return csv_response
-
-            if not object_filtered.exists():
-                context.update({'herbobjs' : [],
-                                'total': 0,
-                                'error': _('Ни одного элемента не удолетворяет условиям запроса')})
-                return HttpResponse(json.dumps(context), content_type="application/json;charset=utf-8")
-
+        if not object_filtered.exists():
+            errors.append(_("Ни одного элемента не удовлетворяет условиям поискового запроса"))
+            return (None, 1, 0, objects_filtered, errors, warnings)
+        else:
             # ------- Sorting items --------------
             # sorting isn't implemented yet
             # ---------  pagination-----------------
-
             pagcount = request.GET.get('pagcount', '')
             page = request.GET.get('page', '1')
             pagcount = int(pagcount) if pagcount.isdigit() else settings.HERBS_PAGINATION_COUNT
             page = int(page) if page.isdigit() else 1
             if pagcount <= 0 or pagcount > 1000:
                 pagcount = settings.HERBS_PAGINATION_COUNT
-            paginator = Paginator(object_filtered, pagcount)
+                warnings.append(_('Задано недопустимое количество объектов для оторажения на одной странице: ') + str(pagcount))
+            paginator = Paginator(objects_filtered, pagcount)
             try:
-                obj_to_show = paginator.page(page)
+                paginated_data = paginator.page(page)
             except:
-                obj_to_show = paginator.page(1)
-            # ----------- Conversion to list of dicts with string needed ----------
-            # make json encoding smarty
-            data_tojson = []
-            for item in obj_to_show.object_list:
-                data_tojson.append(
-                    {
-                     'species': item.get_full_name(),
-                     'itemcode': item.itemcode,
-                     'id': item.pk,
-                     'fieldid': item.fieldid,
-                     'lat': item.coordinates.latitude if item.coordinates else 0.0,
-                     'lon': item.coordinates.longitude if item.coordinates else 0.0,
-                    # Extra data to show herbitem details
-                     'collectedby': item.collectedby,
-                     'collected_s': item.collected_s,
-                     'identifiedby': item.identifiedby,
-                     'created': str(item.created),
-                     'updated': str(item.updated)
-                     })
+                paginated_data = paginator.page(1)
+            return (paginated_data, page, paginator.num_pages, objects_filtered,
+                    errors, warnings)
 
-            # ------------------------------------------------------------------
-            context.update({'herbitems' : data_tojson,
-                            'has_previous': obj_to_show.has_previous(),
-                            'has_next': obj_to_show.has_next(),
-                            'pagenumber': page,
-                            'pagecount': paginator.num_pages,
-                            'total': object_filtered.count(),
-                            })
 
-            return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
-        else:
-            context.update({'herbobjs': [],
-                            'total': 0,
-                            'error': 'Ошибка в форме поиска'})
-            return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
-    else:
+#TODO: Fixes needed: DetHistory added
+@csrf_exempt
+def show_herbs(request):
+    '''
+    Get herbitems view
+    '''
+
+    if request.method == 'POST':
+        return HttpResponse(_('Допустимы только GET-запросы'))
+
+    if not request.is_ajax():
         return HttpResponse(_('Допустимы только XMLHttp-запросы'))
+
+    paginated_data, page, num_pages, objects_filtered, errors, warnings = get_data(request)
+
+    if request.GET.get('getcsv', None) and request.user.is_authenticated():
+        writer = csv.writer(EchoCSV(), delimiter=';')
+        csv_response = StreamingHttpResponse((writer.writerow([unicode(s).encode("utf-8") for s in row]) for row in _get_rows_for_csv(objects_filtered)), content_type="text/csv")
+        csv_response['Content-Disposition'] = 'attachment; filename=herb_data_%s.csv' % timezone.now().strftime('%Y-%B-%d-%M-%s')
+        return csv_response
+
+
+    # ----------- Conversion to list of dicts with string needed ----------
+    # make json encoding smarty
+    data_tojson = []
+    for item in paginated_data.object_list:
+        data_tojson.append(
+            {
+                'species': item.get_full_name(),
+                'itemcode': item.itemcode,
+                'id': item.pk,
+                'fieldid': item.fieldid,
+                'lat': item.coordinates.latitude if item.coordinates else 0.0,
+                'lon': item.coordinates.longitude if item.coordinates else 0.0,
+            # Extra data to show herbitem details
+                'collectedby': item.collectedby,
+                'collected_s': item.collected_s,
+                'identifiedby': item.identifiedby,
+                'created': str(item.created),
+                'updated': str(item.updated)
+                })
+
+    # ------------------------------------------------------------------
+    context.update({'herbitems' : data_tojson,
+                    'has_previous': paginated_data.has_previous(),
+                    'has_next': paginated_data.has_next(),
+                    'pagenumber': page,
+                    'pagecount': num_pages,
+                    'total': objects_filtered.count(),
+                    })
+
+    return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
+
+
+else:
+    context.update({'herbobjs': [],
+                    'total': 0,
+                    'error': 'Ошибка в форме поиска'})
+    return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
+else:
 
 
 @never_cache
