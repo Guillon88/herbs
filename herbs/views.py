@@ -114,6 +114,15 @@ def get_data(request):
         search_by_syns = False
     else:
         search_by_syns = False
+
+    search_by_adds = request.GET.get('adds', False)
+    if search_by_adds == 'true':
+        search_by_adds = True
+    elif search_by_adds == 'false':
+        search_by_adds =  False
+    else:
+        search_by_adds = False
+
     if dataform.is_valid():
         data = {}
         for key in dataform.fields:
@@ -122,11 +131,8 @@ def get_data(request):
             else:
                 data.update({key: dataform.cleaned_data[key]})
         bigquery = [Q(public=True)]
-        bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] and not search_by_syns else []
-        bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] and not search_by_syns else []
-        bigquery += [Q(species__name__icontains=data['species'])] if data['species'] and not search_by_syns else []
 
-        # -------- synonyms searching --------------
+        # -------- synonyms searching -----------------------
         if search_by_syns:
             try:
                 species_queryset = Species.objects.filter(genus__name__iexact=data['genus'], name__iexact=data['species']).exclude(status='D')
@@ -152,8 +158,18 @@ def get_data(request):
             bigquery += [Q(species__genus__family__name__iexact=data['family'])] if data['family'] else []
             bigquery += [Q(species__genus__name__iexact=data['genus'])] if data['genus'] else []
             bigquery += [Q(species__name__icontains=data['species'])] if data['species'] else []
+        # -----------------------------------------------------
 
-        # -------------------------------------------
+        # ------ Searching in History of determination --------
+        dethistory_query = []
+        if search_by_syns:
+            dethistory_query += [Q(dethistory__species__pk__in=intermediate)]
+        else:
+            dethistory_query += [Q(dethistory__species__name__icontains=data['species'])] if data['species'] else []
+            dethistory_query += [Q(dethistory__species__genus__name__iexact=data['genus'])] if data['genus'] else []
+            dethistory_query += [Q(dethisotry__species__genus__family__name__iexact=data['family'])] if data['family'] else []
+        if dethistory_query:
+            dethisotry_query = reduce(operator.and_, dethistory_query)
 
         if data['itemcode']:
             try:
@@ -206,7 +222,7 @@ def get_data(request):
             pass
 
         objects_filtered = HerbItem.objects.filter(reduce(operator.and_,
-                                                            bigquery))
+                                                            bigquery)|dethistory_query)
 
         if not object_filtered.exists():
             errors.append(_("Ни одного элемента не удовлетворяет условиям поискового запроса"))
@@ -231,7 +247,12 @@ def get_data(request):
                     errors, warnings)
 
 
-#TODO: Fixes needed: DetHistory added
+
+@csrf_exempt
+def json_api(request):
+    pass
+
+
 @csrf_exempt
 def show_herbs(request):
     '''
@@ -252,45 +273,45 @@ def show_herbs(request):
         csv_response['Content-Disposition'] = 'attachment; filename=herb_data_%s.csv' % timezone.now().strftime('%Y-%B-%d-%M-%s')
         return csv_response
 
-
-    # ----------- Conversion to list of dicts with string needed ----------
-    # make json encoding smarty
-    data_tojson = []
-    for item in paginated_data.object_list:
-        data_tojson.append(
-            {
-                'species': item.get_full_name(),
-                'itemcode': item.itemcode,
-                'id': item.pk,
-                'fieldid': item.fieldid,
-                'lat': item.coordinates.latitude if item.coordinates else 0.0,
-                'lon': item.coordinates.longitude if item.coordinates else 0.0,
-            # Extra data to show herbitem details
-                'collectedby': item.collectedby,
-                'collected_s': item.collected_s,
-                'identifiedby': item.identifiedby,
-                'created': str(item.created),
-                'updated': str(item.updated)
-                })
-
-    # ------------------------------------------------------------------
-    context.update({'herbitems' : data_tojson,
-                    'has_previous': paginated_data.has_previous(),
-                    'has_next': paginated_data.has_next(),
-                    'pagenumber': page,
-                    'pagecount': num_pages,
-                    'total': objects_filtered.count(),
+    if paginated_data:
+        data_tojson = []
+        for item in paginated_data.object_list:
+            data_tojson.append(
+                {
+                    'species': item.get_full_name(),
+                    'itemcode': item.itemcode,
+                    'id': item.pk,
+                    'fieldid': item.fieldid,
+                    'lat': item.coordinates.latitude if item.coordinates else 0.0,
+                    'lon': item.coordinates.longitude if item.coordinates else 0.0,
+                    'collectedby': item.collectedby,
+                    'collected_s': item.collected_s,
+                    'identifiedby': item.identifiedby,
+                    'created': str(item.created),
+                    'updated': str(item.updated)
                     })
 
-    return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
+        # ------------------------------------------------------------------
+        context.update({'herbitems' : data_tojson,
+                        'has_previous': paginated_data.has_previous(),
+                        'has_next': paginated_data.has_next(),
+                        'pagenumber': page,
+                        'pagecount': num_pages,
+                        'total': objects_filtered.count(),
+                        'error': errors.pop() if errors else ''
+                        })
 
-
-else:
-    context.update({'herbobjs': [],
-                    'total': 0,
-                    'error': 'Ошибка в форме поиска'})
-    return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
-else:
+        return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
+    else:
+        context.update({'herbobjs': [],
+                        'total': 0,
+                        'has_previous': False,
+                        'has_next': False,
+                        'pagenumber': page,
+                        'pagecount': num_pages,
+                        'total': 0
+                        'error': _('Ошибка в форме поиска')})
+        return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
 
 
 @never_cache
