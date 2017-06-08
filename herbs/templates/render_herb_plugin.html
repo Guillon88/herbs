@@ -91,15 +91,33 @@ Created: 30 Aug, 2016
   
     <div id="herbitem-map">
       <div id="herbitem-map-pagelister"></div>
+    <div id="latlon-container">
+        <div id="lat-bottom">
+            <label for="latl-input">Lat, min</label>
+            <input id="latl-input" title="Широта, град.">
+        </div>
+        <div id="lat-top">
+            <label for="latu-input">Lat, max</label>
+            <input id="latu-input" title="Широта, град.">
+        </div>
+        <div id="lon-right">
+            <label for="lonu-input">Lon, max</label>
+            <input id="lonu-input" title="Долгота, град.">
+        </div>
+        <div id="lon-left">
+            <label for="lonl-input">Lon, min</label>
+            <input id="lonl-input" title="Долгота, град.">
+        </div>
+        <div id="latlon-rect">
+            <input type="submit" id="herbitem-rectangle" value="">
+        </div>
+    </div> 
         <h2>Under construction...</h2>
-
         <div id="herbitem-markers-available"></div>
         <div id="herbitem-map-placeholder"></div>
         <div>*{%trans "Отображены только те записи, у которых заданы координаты сбора" %} </div>
   </div>
 </div>
-
-
 <!--  ======================================================== -->
 
 
@@ -369,6 +387,75 @@ font-size: 12pt;
   color: red;
   width: 220px;
 }
+
+div#latlon-container{
+  width: 160px; 
+  height: 100px;
+  border-radius: 4px;
+  padding: 3px; 
+  position:relative;
+  }
+  
+div#lon-left{
+  top: 30px;
+  left: 0px;
+  position:absolute;
+  float: left;
+  }
+  
+div#lon-right{
+  right: 0px;
+  top: 30px;
+  position:absolute;
+  }
+  
+div#lat-top{
+  left: 60px;
+  top: 0px;
+  position:absolute;
+  }
+  
+div#lat-bottom
+  {
+ bottom: 0px;
+ left: 60px;
+ position:absolute;
+  }
+
+div#latlon-rect {
+  top: 40px;
+  left: 60px;
+  position:absolute;
+  }
+  
+div#latlon-rect input#herbitem-rectangle{
+  width: 40px;
+  height: 2em;
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfhBggFLCvIfu/NAAAAv0lEQVQoz4XRMUvDQBgG4Cc5MVXBpY0W0dUg6Or/H51cpY4WlBJRxEGbNolDkzRgSm+6+3h4Ob6XPSfqbiOpoJT7HQKZK3UzmZttwQG4MfXh2VIicyH21IKAkVtfHhUqhTdjZ16tNyBGquqHmqml7SNGEPnpgWWT3IESRz2QNLMO5CLXPZAh739yLTEx9q127M6p0otq1x428ZUHxf9NHirkgnt1S6LBAk62JAyCldylyLl52FHiyruJhc99bfsDV8E4JPJOw2AAAAAASUVORK5CYII=');
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  }
+  
+ 
+  
+#latlon-container input{
+  width: 40px;
+  border-radius: 3px;
+  height: 1em;
+  }
+  
+#latlon-container label{
+font-size: 8pt;
+display: block;
+}
+
+
+
+
+
+
+
 
 </style>
 {%endaddtoblock%}
