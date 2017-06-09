@@ -634,10 +634,10 @@ function herbitemFind(csvFlag){
   var order = null;
   
   // TODO: latl lonu etc... positioning needed
-  var latl = null;
-  var latu = null;
-  var lonl = null;
-  var lonu = null
+  var latl = $('#latl-input').val();
+  var latu = $('#latu-input').val();
+  var lonl = $('#lonl-input').val();
+  var lonu = $('#lonu-input').val();
   var outputHTML = '';
   var outputData = null;
   var commonError = "{%trans "Возникла ошибка при получении ответа за поисковый запрос" %}";
@@ -688,6 +688,7 @@ function herbitemFind(csvFlag){
 var markers=[];
 var infoWindows=[];
 var map=null;
+var rectSelector;
                                          
 function clearMarkers() {
   for (var i = 0; i < markers.length; i++ ) {
@@ -709,6 +710,44 @@ if (map == null && google){
             mapTypeId: 'hybrid'});
             }
 };
+
+
+function updateLatLng(){
+   if (!(map == null) && !(rectSelector == null)) {
+        var ne = rectSelector.getBounds().getNorthEast();
+        var sw = rectSelector.getBounds().getSouthWest();
+        $('#lonl-input').val(sw.lng());
+        $('#lonu-input').val(ne.lng());
+        $('#latu-input').val(ne.lat());
+        $('#latl-input').val(sw.lat());
+        }}; 
+
+
+function initRectSelection(bounds){
+  if !(map == null){
+      var mapCenter = map.getCenter();
+      if (!bounds) {      
+      var bounds;
+      bounds = {
+                north: mapCenter.lat() + 3,
+                south: mapCenter.lat() - 3,
+                east:  mapCenter.lng() + 3,
+                west:  mapCenter.lng() - 3
+                                           };
+                                           }
+      rectSelector = new google.maps.Rectangle({
+                        bounds: bounds,
+                        editable: true,
+                        draggable: true
+                                  });
+      rectSelector = setMap(map);
+      rectSelector.addListener('bounds_changed', updateLatLng);
+  }
+  else{
+    alert("{% trans "Карты google еще не инициализированы"%}");
+  
+  }
+}
 
 function renderMap(data){
   var avLat=0.0, avLon=0.0;
@@ -810,7 +849,10 @@ $('select').on("select2:selecting", function(e) {
   $(this).siblings('div.clear-button').css('display', 'inline-block')
 });
 
-
+$("#latlon-rect").click(function(){
+  cpage=1;
+  herbitemFind(false);
+});
 
 $('div.clear-button').click(function (event){
 $(this).css('display', 'none')
@@ -826,20 +868,54 @@ $("#colend-input").datepicker({dateFormat: "dd.mm.yy"});
 $("#searchform-clear").click(function (event){
 	event.preventDefault();
 $("#syns-input").prop('checked', false);
-$("#adds-input").prop('checked', false);
-$("#syns-error-message").hide(); 
+etMap(map);("#syns-error-message").hide(); 
 $('#family-input').select2('val',''); 
 $('#genus-input').select2('val', '');
 $('#country-input').select2('val', '');
 $('div>input[type=search]').val('');
 $("#herbitem-search-filtering select").val('');
 $('div.clear-button').hide();
+// Clear map rectangular filtering
+$('#latl-input').val('');
+$('#latu-input').val('');
+$('#lonl-input').val('');
+$('#lonu-input').val('');
+if !(rectSelector==null){rectSelector.setMap(null);};
+rectSelector=null;
 $( "div#herb-search-form ul li input:text" ).each(function() {  
 	$(this).val('');
 });
 
 cpage = 1;// <!-- Find cpage in the outer scope and change it; i.e. pagination counter -->
 herbitemFind(false);
+});
+
+$("#latl-input, #latu-input, #lonl-input, #lonu-input").change(function(){
+  var latl, latu, lonl, lonu;
+  latl = $("#latl-input").val();
+  lonl = $("#lonl-input").val();
+  latu = $("#latu-input").val();
+  lonu = $("#lonu-input").val();
+  if (latl&&lonl&&latu&&lonu){
+    if !(rectSelector==null){
+      var bounds;
+       bounds = {
+                north: parseFloat(latu),
+                south: parseFloat(latl),
+                east:  parseFloat(lonu),
+                west:  parseFloat(lonl)
+        try {      
+             initRectSelection(bounds);}
+        catch (err){
+         return;}
+    }
+  }
+  if (!latl&&!lonl&&!latu&&!lonu){
+    if !(rectSelector==null){
+      rectSelector.setMap(null);
+      rectSelector = null;
+    }
+  }
 });
 
 $("#species-input, #genus-input").change(function(){
