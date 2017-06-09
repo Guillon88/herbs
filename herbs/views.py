@@ -8,7 +8,7 @@ from django.forms.models import model_to_dict
 from django.utils.translation import gettext as _
 from .models import (Family, Genus, HerbItem, Country,
                      DetHistory, Species, SpeciesSynonym)
-from .forms import SearchForm
+from .forms import SearchForm, RectSelectorForm
 from .conf import settings
 from .utils import _smartify_altitude, _smartify_dates
 from django.utils.text import capfirst
@@ -107,6 +107,7 @@ def get_data(request):
     objects_filtered = Herbitem.objects.none()
 
     dataform = SearchForm(request.GET)
+    rectform = RectSelectorForm(request.GET)
     search_by_syns = request.GET.get('syns', False)
     if search_by_syns == 'true':
         search_by_syns = True
@@ -170,6 +171,24 @@ def get_data(request):
             dethistory_query += [Q(dethisotry__species__genus__family__name__iexact=data['family'])] if data['family'] else []
         if dethistory_query:
             dethisotry_query = reduce(operator.and_, dethistory_query)
+
+
+        # ------  Searching by rectangular selection...
+        if rectform.is_valid():
+            latl = rectform.cleaned_data['latl']
+            latu = rectform.cleaned_data['latu']
+            lonl = rectform.cleaned_data['lonl']
+            lonu = rectform.cleaned_data['lonu']
+            if latl is None or lonl is None or latu is None or lonu is None:
+                warnings.append(_('Заданы не все границы области поиска. Условия поиска по области будут проигнорированы.'))
+            elif not (-90.0 <= latl <= 90) or not (-90.0 <= latu <= 90.0) or\
+                not (-180.0 <= lonl <= 180.0) or not(-180.0 <= lonu <= 180.0):
+                warnings.append(_('Границы области поиска неправдоподобны для географических координат. Условя поиска по области будут проигнорированы.'))
+            else:
+                bigquery += [Q(latitude__geq=latl) & Q(latitude__leq=latu) &
+                             Q(longitude__geq=lonl) & Q(longitude__leq=lonu)]
+        else:
+            warnings.append(_('Область на карте задана неверно. Условия поиска по области будут проигнорированы.'))
 
         if data['itemcode']:
             try:
