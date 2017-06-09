@@ -15,7 +15,7 @@ Created: 30 Aug, 2016
   <li><label for="species-input">{%trans "Видовой эпитет"%}:</label><div><input type="search" id="species-input"></select><div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div>
       <div><input type="checkbox" name="synonyms" value="False" id="syns-input">{%trans "Учитывать синонимы"%}</div>
         <div id="syns-error-message">{%trans "Поля род и видовой эпитет должны быть заполнены, иначе условие поиска будет проигнорировано"%}</div>
-        <div><input type="checkbox" name="additionals" value="False" id="adds-input" title="{%trans "Некоторые гербарные сборы могут содержать более одного вида" %}">{%trans "Искать в дополнительных видах"%}</div>
+        <div title="{%trans "Некоторые гербарные сборы могут содержать более одного вида" %}"><input type="checkbox" name="additionals" value="False" id="adds-input">{%trans "Искать в дополнительных видах"%}</div>
   </li>
   <li><label for="itemcode-input">{%trans "Код"%}:</label><div><input type="search" id="itemcode-input"></select><div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div></li>
 
@@ -626,8 +626,8 @@ function herbitemFind(csvFlag){
   var acronym = $("#herbitem-acronym").val();
   var pagcount = $("#herbitem-pagination").val();
   var subdivision = $("#herbitem-subdivision").val();
-  var syns = $("#syns-input").is(':checked') ? true : false;
-  var adds = $("#adds-input").is(':cheched') ? true : false;
+  var syns = $("#syns-input").is(":checked");
+  var adds = $("#adds-input").is(":checked"); 
 
   // TODO: orderby field, increasing decreasing ordering
   var orderby = null;
@@ -724,7 +724,7 @@ function updateLatLng(){
 
 
 function initRectSelection(bounds){
-  if !(map == null){
+  if (!map == null){
       var mapCenter = map.getCenter();
       if (!bounds) {      
       var bounds;
@@ -880,7 +880,7 @@ $('#latl-input').val('');
 $('#latu-input').val('');
 $('#lonl-input').val('');
 $('#lonu-input').val('');
-if !(rectSelector==null){rectSelector.setMap(null);};
+if (!rectSelector==null){rectSelector.setMap(null);};
 rectSelector=null;
 $( "div#herb-search-form ul li input:text" ).each(function() {  
 	$(this).val('');
@@ -897,21 +897,22 @@ $("#latl-input, #latu-input, #lonl-input, #lonu-input").change(function(){
   latu = $("#latu-input").val();
   lonu = $("#lonu-input").val();
   if (latl&&lonl&&latu&&lonu){
-    if !(rectSelector==null){
+    if (!rectSelector==null){
       var bounds;
        bounds = {
                 north: parseFloat(latu),
                 south: parseFloat(latl),
                 east:  parseFloat(lonu),
-                west:  parseFloat(lonl)
+                west:  parseFloat(lonl)}
         try {      
-             initRectSelection(bounds);}
+             initRectSelection(bounds);
+             }
         catch (err){
          return;}
     }
   }
   if (!latl&&!lonl&&!latu&&!lonu){
-    if !(rectSelector==null){
+    if (!rectSelector==null){
       rectSelector.setMap(null);
       rectSelector = null;
     }

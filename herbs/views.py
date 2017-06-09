@@ -104,7 +104,7 @@ def get_data(request):
 
     errors = []
     warnings = []
-    objects_filtered = Herbitem.objects.none()
+    objects_filtered = HerbItem.objects.none()
 
     dataform = SearchForm(request.GET)
     rectform = RectSelectorForm(request.GET)
@@ -239,11 +239,14 @@ def get_data(request):
             bigquery += [Q(subdivision__id=subdivision)]
         except ValueError:
             pass
-
-        objects_filtered = HerbItem.objects.filter(reduce(operator.and_,
+        
+        if dethistory_query:
+            objects_filtered = HerbItem.objects.filter(reduce(operator.and_,
                                                             bigquery)|dethistory_query)
+        else:
+            objects_filtered = HerbItem.objects.filter(reduce(operator.and_, bigquery))
 
-        if not object_filtered.exists():
+        if not objects_filtered.exists():
             errors.append(_("Ни одного элемента не удовлетворяет условиям поискового запроса"))
             return (None, 1, 0, objects_filtered, errors, warnings)
         else:
@@ -278,6 +281,7 @@ def show_herbs(request):
     Get herbitems view
     '''
 
+   
     if request.method == 'POST':
         return HttpResponse(_('Допустимы только GET-запросы'))
 
@@ -311,25 +315,25 @@ def show_herbs(request):
                     })
 
         # ------------------------------------------------------------------
-        context.update({'herbitems' : data_tojson,
+        context = {'herbitems' : data_tojson,
                         'has_previous': paginated_data.has_previous(),
                         'has_next': paginated_data.has_next(),
                         'pagenumber': page,
                         'pagecount': num_pages,
                         'total': objects_filtered.count(),
                         'error': errors.pop() if errors else ''
-                        })
+                        }
 
         return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
     else:
-        context.update({'herbobjs': [],
+        context = {'herbobjs': [],
                         'total': 0,
                         'has_previous': False,
                         'has_next': False,
                         'pagenumber': page,
                         'pagecount': num_pages,
-                        'total': 0
-                        'error': _('Ошибка в форме поиска')})
+                        'total': 0,
+                        'error': _(u'Ошибка в форме поиска')}
         return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
 
 
