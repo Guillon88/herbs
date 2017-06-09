@@ -164,6 +164,14 @@ class PermissionMixin:
     def save_model(self, request, obj, form, change):
         if not obj.user:
             obj.user = request.user
+        if obj.coordinates:
+            lat = obj.coordinates.latitude
+            lon = obj.coordinates.longitude
+        else:
+            lat = None
+            lon = None
+        obj.latitude = lat
+        obj.longitude = lon
         obj.save()
 
 # ---------------------------------------------------------------------------
