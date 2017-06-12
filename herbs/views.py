@@ -185,8 +185,8 @@ def get_data(request):
                 not (-180.0 <= lonl <= 180.0) or not(-180.0 <= lonu <= 180.0):
                 warnings.append(_('Границы области поиска неправдоподобны для географических координат. Условя поиска по области будут проигнорированы.'))
             else:
-                bigquery += [Q(latitude__geq=latl) & Q(latitude__leq=latu) &
-                             Q(longitude__geq=lonl) & Q(longitude__leq=lonu)]
+                bigquery += [Q(latitude__gte=latl) & Q(latitude__lte=latu) &
+                             Q(longitude__gte=lonl) & Q(longitude__lte=lonu)]
         else:
             warnings.append(_('Область на карте задана неверно. Условия поиска по области будут проигнорированы.'))
 
@@ -239,7 +239,7 @@ def get_data(request):
             bigquery += [Q(subdivision__id=subdivision)]
         except ValueError:
             pass
-        
+
         if dethistory_query:
             objects_filtered = HerbItem.objects.filter(reduce(operator.and_,
                                                             bigquery)|dethistory_query)
@@ -281,7 +281,7 @@ def show_herbs(request):
     Get herbitems view
     '''
 
-   
+
     if request.method == 'POST':
         return HttpResponse(_('Допустимы только GET-запросы'))
 
