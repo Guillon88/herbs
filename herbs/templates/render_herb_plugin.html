@@ -9,7 +9,9 @@ Created: 30 Aug, 2016
 <!--  ============Herbitem main searchform ================== --> 
 
 <div id="herb-search-form">
-  <ul>
+  <ul>  
+    <li><input type="submit" id="herbitemform-button" value="{% trans "Найти" %}"></li> 
+    <li><input type="submit" id="searchform-clear" value="{%trans "Очистить"%}" title="{%trans "Очистить все условия поиска"%}" ></li>
 	<li><label for="family-input">{%trans "Семейство"%}:</label><div><select id="family-input"></select><div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div></li>
 	<li><label for="genus-input">{%trans "Род"%}:</label><div><select id="genus-input"></select><div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div></li>
   <li><label for="species-input">{%trans "Видовой эпитет"%}:</label><div><input type="search" id="species-input"></select><div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div>
@@ -34,8 +36,6 @@ Created: 30 Aug, 2016
  <li><label for="colend-input">{%trans "Дата сбора (окончание)"%}:</label><div>
   <input type="search" id="colend-input" value="" placeholder="{%trans "Конец сбора"%}"> <div class="clear-button"><span class="ui-icon ui-icon-trash"></span></div></div></li>
      
-  <li><input type="submit" id="searchform-clear" value="{%trans "Очистить"%}"></li>
-  <li><input type="submit" id="herbitemform-button" value="{% trans "Найти" %}"></li> 
   </ul>
 </div> 
 
@@ -113,7 +113,6 @@ Created: 30 Aug, 2016
         </div>
         <div class="clear-rect-bounds" title="{%trans "Очистить условия поиска по области"%}"><span class="ui-icon ui-icon-trash"></span></div>
     </div> 
-        <h2>Under construction...</h2>
         <div id="herbitem-markers-available"></div>
         <div id="herbitem-map-placeholder"></div>
         <div>*{%trans "Отображены только те записи, у которых заданы координаты сбора" %} </div>
@@ -234,6 +233,11 @@ list-style-type: none;
 #herb-search-form>ul li{
 padding-bottom:10px;
 }
+
+#herb-search-form>ul li:nth-child(1){
+float:left;
+}
+
 label {font-weight: bold; display:block;}
 label + * {margin-left: 2em; margin-top: 5px;}
 
@@ -255,10 +259,18 @@ background: #EEFFAA !important;
 padding: 10px;
 font-size: medium;
 }
+#searchform-clear:hover{
+  cursor:pointer;
+}
+
 #herbitemform-button{
 padding:10px;
 font-size:medium;
 }
+
+#herbitemform-button:hover{
+cursor:pointer}
+
 .herbitem-odd{
   background: #FFFFFF;
   height: 2em;
