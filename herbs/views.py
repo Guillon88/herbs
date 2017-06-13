@@ -135,24 +135,24 @@ def get_data(request):
 
         # -------- synonyms searching -----------------------
         if search_by_syns:
-            try:
-                species_queryset = Species.objects.filter(genus__name__iexact=data['genus'], name__iexact=data['species']).exclude(status='D')
-                if species_queryset.exists():
-                    syn_aux = map(lambda x: Q(json_content__contains=',' + '%s' % x + ','),
-                                    species_queryset.values_list('id', flat=True))
-                    intermediate = filter(bool,
-                                            sum([item.json_content.split(',') for item in SpeciesSynonym.objects.filter(reduce(operator.or_, syn_aux))], []))
-                    try:
-                        intermediate =  map(int, intermediate)
-                    except ValueError:
-                        intermediate = []
-                    if intermediate:
-                        bigquery += [Q(species__pk__in=intermediate)]
-                    else:
-                        search_by_syns=False
+            species_queryset = Species.objects.filter(genus__name__iexact=data['genus'], name__iexact=data['species']).exclude(status='D')
+            # make a warning if species object isn't unique... TODO!
+            if species_queryset.exists():
+                syn_aux = map(lambda x: Q(json_content__contains=',' + '%s' % x + ','),
+                                species_queryset.values_list('id', flat=True))
+                intermediate = filter(bool,
+                                        sum([item.json_content.split(',') for item in SpeciesSynonym.objects.filter(reduce(operator.or_, syn_aux))], []))
+                try:
+                    intermediate =  map(int, intermediate)
+                except ValueError:
+                    intermediate = []
+                if intermediate:
+                    bigquery += [Q(species__pk__in=intermediate)]
                 else:
+                    warnings.append(_('Неверно сформированы таблицы синонимов. Условие поиска по синонимам прогнорировано.'))
                     search_by_syns = False
-            except Species.DoesNotExist:
+            else:
+                warnings.append(_('Не заданы поля род и видовой эпитет, либо такой вид отсутствует в базе. Условие поиска по синонимам проигнорировано.'))
                 search_by_syns = False
 
         if not search_by_syns:
@@ -168,9 +168,9 @@ def get_data(request):
         else:
             dethistory_query += [Q(dethistory__species__name__icontains=data['species'])] if data['species'] else []
             dethistory_query += [Q(dethistory__species__genus__name__iexact=data['genus'])] if data['genus'] else []
-            dethistory_query += [Q(dethisotry__species__genus__family__name__iexact=data['family'])] if data['family'] else []
+            dethistory_query += [Q(dethistory__species__genus__family__name__iexact=data['family'])] if data['family'] else []
         if dethistory_query:
-            dethisotry_query = reduce(operator.and_, dethistory_query)
+            dethistory_query = reduce(operator.and_, dethistory_query)
 
 
         # ------  Searching by rectangular selection...
@@ -179,16 +179,17 @@ def get_data(request):
             latu = rectform.cleaned_data['latu']
             lonl = rectform.cleaned_data['lonl']
             lonu = rectform.cleaned_data['lonu']
-            if latl is None or lonl is None or latu is None or lonu is None:
+            if None in [latl, lonl, latu, lonu] and any([latl, lonl, latu, lonu]):
                 warnings.append(_('Заданы не все границы области поиска. Условия поиска по области будут проигнорированы.'))
-            elif not (-90.0 <= latl <= 90) or not (-90.0 <= latu <= 90.0) or\
-                not (-180.0 <= lonl <= 180.0) or not(-180.0 <= lonu <= 180.0):
+            elif (not (-90.0 <= latl <= 90) or not (-90.0 <= latu <= 90.0) or
+                  not (-180.0 <= lonl <= 180.0) or not(-180.0 <= lonu <= 180.0))\
+                  and all([latl, lonl, latu, lonu]):
                 warnings.append(_('Границы области поиска неправдоподобны для географических координат. Условя поиска по области будут проигнорированы.'))
-            else:
+            elif all([latl, lonl, latu, lonu]):
                 bigquery += [Q(latitude__gte=latl) & Q(latitude__lte=latu) &
                              Q(longitude__gte=lonl) & Q(longitude__lte=lonu)]
         else:
-            warnings.append(_('Область на карте задана неверно. Условия поиска по области будут проигнорированы.'))
+            warnings.append(_('Область на карте задана нeкорректно. Условия поиска по области будут проигнорированы.'))
 
         if data['itemcode']:
             try:
@@ -247,7 +248,7 @@ def get_data(request):
             objects_filtered = HerbItem.objects.filter(reduce(operator.and_, bigquery))
 
         if not objects_filtered.exists():
-            errors.append(_("Ни одного элемента не удовлетворяет условиям поискового запроса"))
+            warnings.append(_("Ни одного элемента не удовлетворяет условиям поискового запроса"))
             return (None, 1, 0, objects_filtered, errors, warnings)
         else:
             # ------- Sorting items --------------
@@ -316,24 +317,26 @@ def show_herbs(request):
 
         # ------------------------------------------------------------------
         context = {'herbitems' : data_tojson,
-                        'has_previous': paginated_data.has_previous(),
-                        'has_next': paginated_data.has_next(),
-                        'pagenumber': page,
-                        'pagecount': num_pages,
-                        'total': objects_filtered.count(),
-                        'error': errors.pop() if errors else ''
-                        }
+                   'has_previous': paginated_data.has_previous(),
+                   'has_next': paginated_data.has_next(),
+                   'pagenumber': page,
+                   'pagecount': num_pages,
+                   'total': objects_filtered.count(),
+                   'errors': errors,
+                   'warnings': warnings
+                   }
 
         return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
     else:
-        context = {'herbobjs': [],
-                        'total': 0,
-                        'has_previous': False,
-                        'has_next': False,
-                        'pagenumber': page,
-                        'pagecount': num_pages,
-                        'total': 0,
-                        'error': _(u'Ошибка в форме поиска')}
+        context = {'herbitems': [],
+                   'total': 0,
+                   'has_previous': False,
+                   'has_next': False,
+                   'pagenumber': page,
+                   'pagecount': num_pages,
+                   'total': 0,
+                   'errors': errors,
+                   'warnings': warnings}
         return HttpResponse(json.dumps(context, cls=DjangoJSONEncoder), content_type="application/json;charset=utf-8")
 
 

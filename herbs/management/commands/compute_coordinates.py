@@ -1,4 +1,4 @@
- from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand
 
 try:
     from herbs.models import HerbItem
@@ -12,12 +12,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         count = 0
-        for obj in Herbitem.objects.all().exclude(coordinates__isnull=True):
+        for obj in HerbItem.objects.all().exclude(coordinates__isnull=True):
             try:
                 obj.latitude = float(obj.coordinates.latitude)
                 obj.longitude = float(obj.coordinates.longitude)
                 obj.save()
                 count += 1
-            except ValueError:
+            except (ValueError,AttributeError,TypeError):
                 pass
         self.stdout.write('Successfully updated %s herbarium records' % count)
