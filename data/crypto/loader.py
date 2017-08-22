@@ -7,7 +7,7 @@ os.environ['DJANGO_SETTINGS_MODULE']='bgi.settings'
 import gc
 from ..models import (Family, Genus, Species, Country, HerbItem,
                       Additionals, HerbAcronym, Subdivision)
-from ..utils import  create_safely
+from ..utils import create_safely
 import pandas as pd
 import datetime, calendar
 import re
@@ -18,7 +18,7 @@ CDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 
-data = pd.read_excel(os.path.join(CDIR, 'todb.xlsx'))
+data = pd.read_excel(os.path.join(CDIR, 'todb3.xlsx'))
 data = data.astype(pd.np.object)
 new = data.astype(unicode)['colnum'].map(lambda x: x.strip()).map(lambda y: y.lower())
 inds = new.map(lambda x: True if 'd#' in x or 'duplicate ex' in x else False)
@@ -169,7 +169,7 @@ def evaluate_row(row):
 
     #get ecology
     if len(row['ecology']) < 300:
-        result.update({'detailed': row['ecology'].strip()})
+        result.update({'detailed': row['ecology'].strip() + row['note'].strip()})
     else:
         tonote += '[%s]' % row['ecology'].strip()
 
@@ -280,133 +280,132 @@ def evaluate_row(row):
 # Preliminary information
 user = get_user_model().objects.get(username='bryophyte')
 mainuser = get_user_model().objects.get(username='scidam')
-herbgroup = Subdivision.objects.get(name__icontains='риптогам')
+herbgroup = Subdivision.objects.get(name__icontains='Bryophyte')
 herbacronym = HerbAcronym.objects.get(name='VBGI')
 
 
 
-#for ind, row in data.iterrows():
-    #row_data = evaluate_row(row)
-    
-    #print(ind,row_data)
+for ind, row in data.iterrows():
+    row_data = evaluate_row(row)
+    print(ind,row_data)
 #sdfsd
 
 
 
 # -------------------- Main function: Data loading -------------------
-#for ind, row in data.iterrows():
-	    #print('Evaluating ind:', ind)
-	    #row_data = evaluate_row(row)
-	    #row_data['itemcode'] = '%s' % (318014 + ind)
-	    #tonote = row_data['note']
+for ind, row in data.iterrows():
+	    print('Evaluating ind:', ind)
+	    row_data = evaluate_row(row)
+	    # row_data['itemcode'] = '%s' % (318014 + ind)
+	    tonote = row_data['note']
 
-	    ## -------- species loading --------
-	    #genus = row_data['species'][0][0].lower().strip()
-	    #species = row_data['species'][0][1].lower().strip()
-	    #authorship = row_data['species'][0][2].strip()
+	    # -------- species loading --------
+	    genus = row_data['species'][0][0].lower().strip()
+	    species = row_data['species'][0][1].lower().strip()
+	    authorship = row_data['species'][0][2].strip()
 
-	    #if row_data['species'][1] > 0:
-		#tonote += '[Sp. ambig. %s]' % row_data['species'][1]
+	    if row_data['species'][1] > 0:
+		tonote += '[Sp. ambig. %s]' % row_data['species'][1]
 
-	    #genobj = create_safely(Genus, ('name',), (genus, ), postamble='')
-	    #spobj = create_safely(Species, ('name', 'genus', 'authorship'), (species, genobj, authorship), postamble='')
+	    genobj = create_safely(Genus, ('name',), (genus, ), postamble='')
+	    spobj = create_safely(Species, ('name', 'genus', 'authorship'), (species, genobj, authorship), postamble='')
 
-	    #herbitem = HerbItem(species=spobj,
-				#region=row_data['region'],
-				#fieldid=row_data['fieldid'],
-				#itemcode=row_data['itemcode'],
-				#altitude=str(row_data['altitude']),
-				#collectedby=row_data['collectedby'],
-				#identifiedby=row_data['identifiedby'],
-				#detailed=row_data['detailed'],
-				#acronym=herbacronym,
-				#user=user,
-				#subdivision=herbgroup
-				#)
+	    herbitem = HerbItem(species=spobj,
+				region=row_data['region'],
+				fieldid=row_data['fieldid'],
+				itemcode=row_data['itemcode'],
+				altitude=str(row_data['altitude']),
+				collectedby=row_data['collectedby'],
+				identifiedby=row_data['identifiedby'],
+				detailed=row_data['detailed'],
+				acronym=herbacronym,
+				user=user,
+				subdivision=herbgroup
+				)
 
-	    #if row_data['lat'] and row_data['lon']:
-		#herbitem.coordinates=Geoposition(row_data['lat'], row_data['lon'])
-	    #if row_data['collected_s']:
-		#herbitem.collected_s=row_data['collected_s']
-	    #if row_data['collected_e']:
-		#herbitem.collected_e=row_data['collected_e']
-	    #if row_data['identified_s']:
-		#herbitem.identified_s=row_data['identified_s']
-	    #if row_data['identified_e']:
-		#herbitem.identified_e=row_data['identified_e']
+	    if row_data['lat'] and row_data['lon']:
+		herbitem.coordinates=Geoposition(row_data['lat'], row_data['lon'])
+	    if row_data['collected_s']:
+		herbitem.collected_s=row_data['collected_s']
+	    if row_data['collected_e']:
+		herbitem.collected_e=row_data['collected_e']
+	    if row_data['identified_s']:
+		herbitem.identified_s=row_data['identified_s']
+	    if row_data['identified_e']:
+		herbitem.identified_e=row_data['identified_e']
 
-	    ## ----- additionals ----- and country, herbacronym, herbgroup ...
+	    # ----- additionals ----- and country, herbacronym, herbgroup ...
 
-	    ## --------- get and set  country ---------------
-	    #if row_data['country']:
-		#try:
-		    #cc = Country.objects.filter(name_en__icontains=row_data['country'].strip().lower())[0]
-		    #herbitem.country = cc
-		#except:
-		    #tonote += '[%s]'%row_data['country']
-	    ## ----------------------------------------------
-	    ## save herbitem
-	    #herbitem.save()
-	    ## --------- fill  additionals ----------------
+	    # --------- get and set  country ---------------
+	    if row_data['country']:
+		try:
+		    cc = Country.objects.filter(name_en__icontains=row_data['country'].strip().lower())[0]
+		    herbitem.country = cc
+		except:
+		    tonote += '[%s]' % row_data['country']
+	    # ----------------------------------------------
+	    # save herbitem
+	    herbitem.save()
+	    # --------- fill  additionals ----------------
 
-	    #for adsp, count in row_data['additionals']:
-		#adgenus = adsp[0]
-		#adspecies = adsp[1]
-		#adauthor = adsp[2]
-		#adgenobj = create_safely(Genus, ('name',), (adgenus, ), postamble='')
-		#adspobj = create_safely(Species, ('name', 'genus', 'authorship'), (adspecies, adgenobj, adauthor), postamble='')
-		#cur_add = Additionals(herbitem=herbitem, identifiedby=row_data['identifiedby'], species=adspobj)
-		#if row_data['identified_s']:
-		    #cur_add.identified_s = row_data['identified_s']
-		#cur_add.save()
-		#spcount = Species.objects.filter(name__iexact=adspecies, genus=adgenobj,
-					   #authorship=adauthor).count()
-		#if  spcount > 1:
-		    #tonote += '[%s: amb.=%s]' %(adspobj.get_full_name(), spcount)
-	    #herbitem.note = tonote
-	    #herbitem.save()
-	    #gc.collect()
+	    for adsp, count in row_data['additionals']:
+		adgenus = adsp[0]
+		adspecies = adsp[1]
+		adauthor = adsp[2]
+		adgenobj = create_safely(Genus, ('name',), (adgenus, ), postamble='')
+		adspobj = create_safely(Species, ('name', 'genus', 'authorship'), (adspecies, adgenobj, adauthor), postamble='')
+		cur_add = Additionals(herbitem=herbitem, identifiedby=row_data['identifiedby'], species=adspobj)
+		if row_data['identified_s']:
+		    cur_add.identified_s = row_data['identified_s']
+		cur_add.save()
+		spcount = Species.objects.filter(name__iexact=adspecies, genus=adgenobj,
+					   authorship=adauthor).count()
+		if  spcount > 1:
+		    tonote += '[%s: amb.=%s]' %(adspobj.get_full_name(), spcount)
+	    herbitem.note = tonote
+	    herbitem.save()
+	    gc.collect()
 
 
 
 
 # ---- Modifier
-for ind, row in data.iterrows():
-    print('Evaluating ind:', ind)
-    row_data = evaluate_row(row)
-    herbitem = Herbitem.objects.get(itemcode=row_data['itemcode'], user=user)
-    if not herbitem.public and herbitem.user == user:
-        tonote = ''
-        genus = row_data['species'][0][0].lower().strip()
-        species = row_data['species'][0][1].lower().strip()
-        authorship = row_data['species'][0][2].strip()
-        if row_data['species'][1] > 0:
-            tonote += '[Sp. ambig. %s]' % row_data['species'][1]
-        genobj = create_safely(Genus, ('name',), (genus, ), postamble='')
-        spobj = create_safely(Species, ('name', 'genus', 'authorship'), (species, genobj, authorship), postamble='')
-        herbitem.species = spobj
-        
-        # Additionals updation
-        adds = Additionals.objects.filter(herbitem=herbitem)
-        if adds.exists():
-            print('Found additionls')
-            #adds.delete()
-        
-        for adsp, count in row_data['additionals']:
-            adgenus = adsp[0]
-            adspecies = adsp[1]
-            adauthor = adsp[2]
-            adgenobj = create_safely(Genus, ('name',), (adgenus, ), postamble='')
-            adspobj = create_safely(Species, ('name', 'genus', 'authorship'), (adspecies, adgenobj, adauthor), postamble='')
-            cur_add = Additionals(herbitem=herbitem, identifiedby=row_data['identifiedby'], species=adspobj)
-            if row_data['identified_s']:
-                cur_add.identified_s = row_data['identified_s']
-            #cur_add.save()
-            spcount = Species.objects.filter(name__iexact=adspecies, genus=adgenobj,
-                                             authorship=adauthor).count()
-            if  spcount > 1:
-                tonote += '[%s: amb.=%s]' %(adspobj.get_full_name(), spcount)
-        herbitem.note = herbitem.note + tonote
+# for ind, row in data.iterrows():
+#     print('Evaluating ind:', ind)
+#     row_data = evaluate_row(row)
+#     herbitem = Herbitem.objects.get(itemcode=row_data['itemcode'], user=user)
+#     if not herbitem.public and herbitem.user == user:
+#         tonote = ''
+#         genus = row_data['species'][0][0].lower().strip()
+#         species = row_data['species'][0][1].lower().strip()
+#         authorship = row_data['species'][0][2].strip()
+#         if row_data['species'][1] > 0:
+#             tonote += '[Sp. ambig. %s]' % row_data['species'][1]
+#         genobj = create_safely(Genus, ('name',), (genus, ), postamble='')
+#         spobj = create_safely(Species, ('name', 'genus', 'authorship'), (species, genobj, authorship), postamble='')
+#         herbitem.species = spobj
+#
+#         # Additionals updation
+#         adds = Additionals.objects.filter(herbitem=herbitem)
+#         if adds.exists():
+#             print('Found additionls')
+#             #adds.delete()
+#
+#         for adsp, count in row_data['additionals']:
+#             adgenus = adsp[0]
+#             adspecies = adsp[1]
+#             adauthor = adsp[2]
+#             adgenobj = create_safely(Genus, ('name',), (adgenus, ), postamble='')
+#             adspobj = create_safely(Species, ('name', 'genus', 'authorship'), (adspecies, adgenobj, adauthor), postamble='')
+#             cur_add = Additionals(herbitem=herbitem, identifiedby=row_data['identifiedby'], species=adspobj)
+#             if row_data['identified_s']:
+#                 cur_add.identified_s = row_data['identified_s']
+#             #cur_add.save()
+#             spcount = Species.objects.filter(name__iexact=adspecies, genus=adgenobj,
+#                                              authorship=adauthor).count()
+#             if  spcount > 1:
+#                 tonote += '[%s: amb.=%s]' %(adspobj.get_full_name(), spcount)
+#         herbitem.note = herbitem.note + tonote
         
         
 
