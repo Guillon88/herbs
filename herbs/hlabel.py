@@ -192,6 +192,14 @@ class PDF_MIXIN(object):
                      line_nums=4, force=False, font_size=10,
                      line_height=None):
 
+
+        def smarty_split(s):
+            s_splited = s.split()
+            if len(s_splited) == 1 and ' ' in s: return s
+            if len(s_splited) > 1:
+                return [item + ' ' for item in s_splited[:-1]] + [s_splited[-1]]
+            return s.split()
+
         def choose_font(fs=''):
             if fs == '':
                 return 'DejaVu'
@@ -221,33 +229,34 @@ class PDF_MIXIN(object):
                     allowed_line_length = right_position - left_position - first_indent
                 else:
                     allowed_line_length = right_position - left_position
-                for word in item[0].split():
-                    current_width = self.pdf.get_string_width(item[0] + ' ')
+                for word in smarty_split(item[0]):
+                    print(item[0])
+                    current_width = self.pdf.get_string_width(word)
                     cline_width += current_width
                     if cline_width < allowed_line_length:
                         lines[-1].append((word, choose_font(item[-1])))
                     else:
                         lines.append([])
                         lines[-1].append((word, choose_font(item[-1])))
-                        cline_width = 0
+                        cline_width = current_width
                         line_number += 1
-            if font_size < 2:
+
+            if font_size < 5:
                 done = True
             if line_number > line_nums and force:
                 font_size -= 1
                 self._lh = font_size * fraction
             else:
                 done = True
-
+        print(lines)
         xpos = left_position + first_indent
         for line in lines:
             ypos = self.goto(y, self._ln)
-            print('Line height is', self._lh, self._ln, ypos)
             for item in line:
                 self.pdf.set_font(item[-1], '', font_size)
                 self.pdf.set_xy(xpos, ypos)
-                self.pdf.cell(0, 0, item[0] + ' ')
-                xpos += self.pdf.get_string_width(item[0] + ' ')
+                self.pdf.cell(0, 0, item[0])
+                xpos += self.pdf.get_string_width(item[0])
             self._ln += 1
             xpos = left_position
 
@@ -1047,17 +1056,16 @@ if __name__ == '__main__':
 
     def test_smarty_printing():
         sample_text = '''
-        <b> this is </b> an example. It is really
-        interesting <b> some <i> text </i> and font </b>
-        Nothing to say else.
-        ''' * 8
+        <b> this is </b> a sample text. It is really
+        interesting <b> and simple <i> text</i>. It uses different fonts </b>
+        and <i>styles</i>.
+        ''' * 10
 
         p = PDF_BRYOPHYTE()
-        p.pdf.add_page()
         p.smarty_print(sample_text, 0, left_position=10,
-                 first_indent=10, right_position=200,
-                 line_nums=10, force=False, font_size=12,
-                 line_height=25)
+                 first_indent=10, right_position=190,
+                 line_nums=0, force=False, font_size=30,
+                 line_height=10)
         p.create_file('smarty_text.pdf')
 
     test_smarty_printing()
