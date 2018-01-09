@@ -176,10 +176,10 @@ class PDF_MIXIN(object):
         self.pdf.set_auto_page_break(0, 0)
         self.pdf.add_page()
         self._ln = 0
-        self.lnhght = LINE_HEIGHT
+        self._lh = LINE_HEIGHT
 
     def goto(self, y, n, inter=0):
-        return y + PADDING_Y + (self.lnhght + INTERSPACE) * n + inter
+        return y + PADDING_Y + (self._lh + INTERSPACE) * n + inter
 
     def get_pdf(self):
         return self.pdf.output(dest='S')
@@ -187,8 +187,7 @@ class PDF_MIXIN(object):
     def create_file(self, fname):
         self.pdf.output(fname, dest='F')
 
-
-    def smarty_print(self, txt, y,  left_position=0,
+    def smarty_print(self, txt, y, left_position=0,
                      first_indent=10, right_position=10,
                      line_nums=4, force=False, font_size=10,
                      line_height=None):
@@ -205,9 +204,9 @@ class PDF_MIXIN(object):
             else:
                 return 'DejaVu'
 
-        old_height = self.lnhght
-        self.lnhght = line_height or self.lnhght
-        fraction = float(self.lnhght) / font_size
+        old_height = self._lh
+        self._lh = line_height or self._lh
+        fraction = float(self._lh) / font_size
 
         parser = CustomParser()
         done = False
@@ -236,23 +235,23 @@ class PDF_MIXIN(object):
                 done = True
             if line_number > line_nums and force:
                 font_size -= 1
-                self.lnhght = font_size * fraction
+                self._lh = font_size * fraction
             else:
                 done = True
 
         xpos = left_position + first_indent
-
         for line in lines:
             ypos = self.goto(y, self._ln)
+            print('Line height is', self._lh, self._ln, ypos)
             for item in line:
                 self.pdf.set_font(item[-1], '', font_size)
                 self.pdf.set_xy(xpos, ypos)
-                self.pdf.cell(item[0] + ' ')
+                self.pdf.cell(0, 0, item[0] + ' ')
                 xpos += self.pdf.get_string_width(item[0] + ' ')
             self._ln += 1
             xpos = left_position
 
-        self.lnhght = old_height
+        self._lh = old_height
 
 
 class PDF_DOC(PDF_MIXIN):
@@ -332,7 +331,7 @@ class PDF_DOC(PDF_MIXIN):
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
                 self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
                 self.pdf.cell(0, 0, author_name)
-                self.lnhght *= LINE_SCALE
+                self._lh *= LINE_SCALE
                 self._ln += 1
                 scaled = True
         else:
@@ -440,10 +439,10 @@ class PDF_DOC(PDF_MIXIN):
             self.pdf.set_xy(x + PADDING_X + 2 + tw, self.goto(y, self._ln))
             self.pdf.cell(0, 0, prepare[0])
             if len(prepare) > 3:
-                self.lnhght *= LINE_SCALE**2
+                self._lh *= LINE_SCALE**2
                 self._ln += 2 if not scaled else 2.5
             elif len(prepare) == 3:
-                self.lnhght *= LINE_SCALE
+                self._lh *= LINE_SCALE
                 self._ln += 1
             for line in prepare[1:4]:
                 self._ln += 1
@@ -567,7 +566,7 @@ class PDF_DOC(PDF_MIXIN):
 
     def make_label(self, x, y, **kwargs):
         self._ln = 0
-        self.lnhght = LINE_HEIGHT
+        self._lh = LINE_HEIGHT
         self._add_label(x, y, **kwargs)
 
     def tile_less4_labels(self, l_labels):
@@ -693,7 +692,7 @@ class PDF_BRYOPHYTE(BARCODE):
             SMALL_FONT_SIZE)
         self._lh = 5.0 * self._sfs / float(SMALL_FONT_SIZE)
 
-    def goto(self, n, inter=0, y=DEFAULT_PAGE_HEIGHT * 2.0 / 3.0):
+    def goto_line(self, n, inter=0, y=DEFAULT_PAGE_HEIGHT * 2.0 / 3.0):
         return y + BRYOPHYTE_TOP_MARGIN + self._lh * n + inter
 
     def clear_page(self):
@@ -740,13 +739,13 @@ class PDF_BRYOPHYTE(BARCODE):
                 self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE - 2)
                 fsw = self.pdf.get_string_width(field_string)
                 self.pdf.set_xy(DEFAULT_PAGE_WIDTH - BRYOPHYTE_LEFT_MARGIN - fsw,
-                                self.goto(self._ln - 1))
+                                self.goto_line(self._ln - 1))
                 self.pdf.cell(0, 0, field_string)
 
             if type_status:
                 self.pdf.set_text_color(255, 0, 0)
                 self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN - BRYOPHYTE_MARGIN_EXTRA,
-                                self.goto(self._ln) - 2)
+                                self.goto_line(self._ln) - 2)
                 self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
                 self.pdf.cell(0, 0, type_status)
                 self.pdf.set_text_color(0, 0, 0)
@@ -758,7 +757,7 @@ class PDF_BRYOPHYTE(BARCODE):
             for sp, auth, ir, iep, _note in allspecies:
                 mainind += 1
                 self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                                self.goto(self._ln))
+                                self.goto_line(self._ln))
                 self.pdf.set_font('DejaVu', '', self._sfs)
                 spaw = self.pdf.get_string_width(auth)
                 self.pdf.set_font('DejaVubi', '', self._sfs)
@@ -770,68 +769,68 @@ class PDF_BRYOPHYTE(BARCODE):
                     if spw + 2 + irw > label_width:
                         self._ln += 1
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
 
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + irw + 4 + iepw,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.cell(0, 0, auth)
 
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + irw + 2,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.cell(0,0, iep)
                         cur_cell_width = irw + 4 + iepw + spaw
                     elif spw + 2 + irw + iepw > label_width:
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
                         self._ln += 1
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.cell(0, 0, iep)
 
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + iepw + 2,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.cell(0, 0, auth)
                         cur_cell_width = spaw + iepw + 2
                     elif spaw + spw + 2 + irw + iepw > label_width:
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2 + 2 + irw,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.cell(0, 0, iep)
                         self._ln += 1
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.cell(0, 0, auth)
                         cur_cell_width = spaw
                     else:
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2 + 2 + irw,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.cell(0, 0, iep)
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 6 + irw +iepw,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.cell(0, 0, auth)
                         cur_cell_width = spw + 6 + irw +iepw + spaw
                 else:
                     self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + 2,
-                                self.goto(self._ln))
+                                self.goto_line(self._ln))
                     fline = []
                     sline = []
                     if spaw + spw + 2 > label_width:
@@ -848,7 +847,7 @@ class PDF_BRYOPHYTE(BARCODE):
                     if sline:
                         self._ln += 1
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                                        self.goto(self._ln))
+                                        self.goto_line(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.cell(0, 0, ' '.join(sline))
                         cur_cell_width = self.pdf.get_string_width(' '.join(sline))
@@ -884,7 +883,7 @@ class PDF_BRYOPHYTE(BARCODE):
 
             self.pdf.set_font('DejaVu', '', self._sfs)
             self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
-                            self.goto(self._ln))
+                            self.goto_line(self._ln))
 
             if collected:
                 leg_info = 'Leg. ' + translit(collected, 'ru', reversed=True)
@@ -1037,7 +1036,7 @@ if __name__ == '__main__':
             tp['fieldid'] += str(ind)
             labels.append(tp)
         p.generate_labels(labels)
-        p.create_file('/home/dmitry/bryophyte_label.pdf')
+        p.create_file('bryophyte_label.pdf')
 
 
     def test_barcode():
@@ -1046,7 +1045,22 @@ if __name__ == '__main__':
         my.create_file('barcode.pdf')
 
 
-    test_bryophyte()
+    def test_smarty_printing():
+        sample_text = '''
+        <b> this is </b> an example. It is really
+        interesting <b> some <i> text </i> and font </b>
+        Nothing to say else.
+        ''' * 8
+
+        p = PDF_BRYOPHYTE()
+        p.pdf.add_page()
+        p.smarty_print(sample_text, 0, left_position=10,
+                 first_indent=10, right_position=200,
+                 line_nums=10, force=False, font_size=12,
+                 line_height=25)
+        p.create_file('smarty_text.pdf')
+
+    test_smarty_printing()
 
 
 
