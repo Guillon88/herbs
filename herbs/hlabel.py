@@ -165,8 +165,6 @@ class CustomParser(HTMLParser, object):
         return self._data_
 
 
-
-
 class PDF_MIXIN(object):
     def __init__(self, orientation='L'):
         self.pdf = FPDF(orientation=orientation)
@@ -192,7 +190,8 @@ class PDF_MIXIN(object):
 
     def smarty_print(self, txt, y,  left_position=0,
                      first_indent=10, right_position=10,
-                     line_nums=4, force=False, font_size=10):
+                     line_nums=4, force=False, font_size=10,
+                     line_height=None):
 
         def choose_font(fs=''):
             if fs == '':
@@ -205,6 +204,10 @@ class PDF_MIXIN(object):
                 return 'DejaVubi'
             else:
                 return 'DejaVu'
+
+        old_height = self.lnhght
+        self.lnhght = line_height or self.lnhght
+        fraction = float(self.lnhght) / font_size
 
         parser = CustomParser()
         done = False
@@ -233,6 +236,7 @@ class PDF_MIXIN(object):
                 done = True
             if line_number > line_nums and force:
                 font_size -= 1
+                self.lnhght = font_size * fraction
             else:
                 done = True
 
@@ -247,6 +251,8 @@ class PDF_MIXIN(object):
                 xpos += self.pdf.get_string_width(item[0] + ' ')
             self._ln += 1
             xpos = left_position
+
+        self.lnhght = old_height
 
 
 class PDF_DOC(PDF_MIXIN):
