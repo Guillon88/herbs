@@ -5,6 +5,8 @@ import fpdf
 import tempfile
 import qrcode
 import os
+import re
+
 
 if __name__ == '__main__':
     from transliterate import translit
@@ -178,8 +180,8 @@ class PDF_MIXIN(object):
         self._ln = 0
         self._lh = LINE_HEIGHT
 
-    def goto(self, y, n, inter=0):
-        return y + PADDING_Y + (self._lh + INTERSPACE) * n + inter
+    def goto(self, y, n):
+        return y + self._lh * n
 
     def get_pdf(self):
         return self.pdf.output(dest='S')
@@ -187,18 +189,15 @@ class PDF_MIXIN(object):
     def create_file(self, fname):
         self.pdf.output(fname, dest='F')
 
-    def smarty_print(self, txt, y, left_position=0,
+    def smarty_print(self, txt, y=None, left_position=0,
                      first_indent=10, right_position=10,
-                     line_nums=4, force=False, font_size=10,
-                     line_height=None):
+                     y_max=0, min_font_size=6, font_size=10,
+                     line_height=None, lh_step=0.2, fs_step=0.5):
 
+        if not y:
+            y = self.pdf.get_y()
 
-        def smarty_split(s):
-            s_splited = s.split()
-            if len(s_splited) == 1 and ' ' in s: return s
-            if len(s_splited) > 1:
-                return [item + ' ' for item in s_splited[:-1]] + [s_splited[-1]]
-            return s.split()
+        word_pat = re.compile('\s?\S+\s?')
 
         def choose_font(fs=''):
             if fs == '':
@@ -217,20 +216,21 @@ class PDF_MIXIN(object):
         fraction = float(self._lh) / font_size
 
         parser = CustomParser()
+        parser.feed(txt)
         done = False
+        iter = 0
         while not done:
-            parser.feed(txt)
             line_number = 0
             lines = [[]]
             cline_width = 0
+            iter+=1
             for item in parser.parsed:
                 self.pdf.set_font(choose_font(item[-1]), '', font_size)
                 if line_number == 0:
                     allowed_line_length = right_position - left_position - first_indent
                 else:
                     allowed_line_length = right_position - left_position
-                for word in smarty_split(item[0]):
-                    print(item[0])
+                for word in word_pat.findall(item[0].replace('\n', '')):
                     current_width = self.pdf.get_string_width(word)
                     cline_width += current_width
                     if cline_width < allowed_line_length:
@@ -240,30 +240,39 @@ class PDF_MIXIN(object):
                         lines[-1].append((word, choose_font(item[-1])))
                         cline_width = current_width
                         line_number += 1
+            #print("Current iteration:", iter, self._lh, font_size, y_max,(y + (0.352778 * font_size + self._lh) * len(lines)))
 
-            if font_size < 5:
-                done = True
-            if line_number > line_nums and force:
-                font_size -= 1
-                self._lh = font_size * fraction
+            if y_max:
+                if y_max < (y + (0.352778 * font_size + self._lh) * len(lines)):
+                    if ((self._lh - lh_step) / 0.352778) > font_size:
+                        self._lh -= lh_step
+                    else:
+                        font_size -= fs_step
+                        self._lh = font_size * fraction
+                        if font_size < min_font_size:
+                            done = True
+                else:
+                    done = True
             else:
                 done = True
-        print(lines)
+
         xpos = left_position + first_indent
-        for line in lines:
-            ypos = self.goto(y, self._ln)
-            for item in line:
+        for ind, line in enumerate(lines):
+            ypos = y + self._lh * ind
+            for wc, item in enumerate(line):
                 self.pdf.set_font(item[-1], '', font_size)
                 self.pdf.set_xy(xpos, ypos)
-                self.pdf.cell(0, 0, item[0])
+                self.pdf.cell(0, 0, item[0] if wc != 0 else item[0].lstrip())
                 xpos += self.pdf.get_string_width(item[0])
-            self._ln += 1
             xpos = left_position
 
         self._lh = old_height
 
 
 class PDF_DOC(PDF_MIXIN):
+
+    def goto_line(self, y, n, inter=0):
+        return y + PADDING_Y + (self._lh + INTERSPACE) * n + inter
 
     def _add_label(self, x, y, family='', species='', spauth='',
                    coldate='', latitude='', longitude='',
@@ -278,24 +287,24 @@ class PDF_DOC(PDF_MIXIN):
         self.pdf.image(logo_path or BGI_LOGO_IMG, w=LOGO_WIDTH, h=LOGO_HEIGHT)
 
         self.pdf.set_font('DejaVu', '', TITLE_FONT_SIZE + 2)
-        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto_line(y, self._ln))
         self.pdf.cell(LABEL_WIDTH - LOGO_WIDTH-2 * PADDING_X, 0, msgs['org'],
                       align='C')
         self.pdf.set_font_size(REGULAR_FONT_SIZE)
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto_line(y, self._ln))
         self.pdf.cell(LABEL_WIDTH - LOGO_WIDTH - 2 * PADDING_X, 0,
                       msgs['descr'] % (institute, acronym),
                       align='C')
         self.pdf.set_font_size(SMALL_FONT_SIZE)
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + LOGO_WIDTH, self.goto_line(y, self._ln))
         self.pdf.cell(LABEL_WIDTH - LOGO_WIDTH - 2 * PADDING_X, 0, address,
                       align='C')
-        self.pdf.line(x + PADDING_X, self.goto(y, 2) + 4,
-                      x + LABEL_WIDTH - PADDING_X, self.goto(y, 2) + 4)
+        self.pdf.line(x + PADDING_X, self.goto_line(y, 2) + 4,
+                      x + LABEL_WIDTH - PADDING_X, self.goto_line(y, 2) + 4)
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln) + 1)
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln) + 1)
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         if family:
             self.pdf.cell(LABEL_WIDTH - 2 * PADDING_X, 0, family,
@@ -306,7 +315,7 @@ class PDF_DOC(PDF_MIXIN):
 
         self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
         if gform:
-            self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln) + 1)
+            self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln) + 1)
             if gform == 'G':
                 self.pdf.cell(0, 0, 'Growth form')
             elif gform == 'D':
@@ -324,21 +333,21 @@ class PDF_DOC(PDF_MIXIN):
         if not infra_rank:
             scaled = False
             if x_pos > PADDING_X:
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, species)
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
-                self.pdf.set_xy(x + x_pos + sp_w + 2, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos + sp_w + 2, self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, author_name)
             else:
                 x_pos = LABEL_WIDTH / 2 - sp_w / 2
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, species)
                 self._ln += 1
                 x_pos = LABEL_WIDTH / 2 - au_w / 2
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, author_name)
                 self._lh *= LINE_SCALE
                 self._ln += 1
@@ -350,44 +359,44 @@ class PDF_DOC(PDF_MIXIN):
             x_pos = LABEL_WIDTH / 2 - (au_w + sp_w +rw + epw + 2) / 2
             scaled = False
             if x_pos > PADDING_X:
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, species)
 
                 x_pos += sp_w + 1
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, infra_rank)
 
                 x_pos += rw
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, infra_epithet)
 
                 x_pos += epw + 1
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, author_name)
             else:
                 x_pos = LABEL_WIDTH / 2 - sp_w / 2
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 self.pdf.cell(0, 0, species)
                 self._ln += 1
                 x_pos = LABEL_WIDTH  - au_w - self.pdf.get_string_width(infra_rank + ' ' + infra_epithet)
                 x_pos /= 2.0
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, infra_rank)
 
                 self.pdf.set_font('DejaVui', '', REGULAR_FONT_SIZE)
                 x_pos += rw + 1
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, infra_epithet)
 
                 x_pos += epw + 1
                 self.pdf.set_font('DejaVu', '', REGULAR_FONT_SIZE)
-                self.pdf.set_xy(x + x_pos, self.goto(y, self._ln))
+                self.pdf.set_xy(x + x_pos, self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, author_name)
 
                 scaled = True
@@ -398,11 +407,11 @@ class PDF_DOC(PDF_MIXIN):
             country = ''
         country = smartify_language(country, lang='en')
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
         tw = self.pdf.get_string_width(msgs['country'])
         self.pdf.cell(0, 0, msgs['country'])
-        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         cw = self.pdf.get_string_width(country)
         self.pdf.cell(0, 0, country)
@@ -417,89 +426,101 @@ class PDF_DOC(PDF_MIXIN):
             if PADDING_X + 4 + tw + cw + rw + rtw < LABEL_WIDTH:
                 self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
                 self.pdf.set_xy(x + PADDING_X + 4 + tw + cw,
-                                self.goto(y, self._ln))
+                                self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, msgs['region'])
                 self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
                 self.pdf.set_xy(x + PADDING_X + 5 + tw + cw + rw,
-                                self.goto(y, self._ln))
+                                self.goto_line(y, self._ln))
                 self.pdf.cell(0, 0, region)
 
+        # printing place of collection (location and environmental conditions)
+        # if place.strip():
+        #     prepare = []
+        #     place = smartify_language(place, lang='en')
+        #     self._ln += 1
+        #     self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
+        #     tw = self.pdf.get_string_width(msgs['place'])
+        #     self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
+        #     self.pdf.cell(0, 0, msgs['place'])
+        #     self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
+        #     cline = []
+        #     ss = PADDING_X + 1 + tw
+        #     for item in place.split():
+        #         ss += self.pdf.get_string_width(item + ' ')
+        #         if ss < LABEL_WIDTH - 2 * PADDING_X:
+        #             cline.append(item)
+        #         else:
+        #             prepare.append(' '.join(cline))
+        #             cline = [item]
+        #             ss = PADDING_X + self.pdf.get_string_width(item + ' ')
+        #     if cline:
+        #         prepare.append(' '.join(cline))
+        #     self.pdf.set_xy(x + PADDING_X + 2 + tw, self.goto_line(y, self._ln))
+        #     self.pdf.cell(0, 0, prepare[0])
+        #     if len(prepare) > 3:
+        #         self._lh *= LINE_SCALE**2
+        #         self._ln += 2 if not scaled else 2.5
+        #     elif len(prepare) == 3:
+        #         self._lh *= LINE_SCALE
+        #         self._ln += 1
+        #     for line in prepare[1:4]:
+        #         self._ln += 1
+        #         self.pdf.set_xy(x + PADDING_X + 2, self.goto_line(y, self._ln))
+        #         self.pdf.cell(0, 0, line)
+
+
         if place.strip():
-            prepare = []
             place = smartify_language(place, lang='en')
             self._ln += 1
-            self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
-            tw = self.pdf.get_string_width(msgs['place'])
-            self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
-            self.pdf.cell(0, 0, msgs['place'])
-            self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
-            cline = []
-            ss = PADDING_X + 1 + tw
-            for item in place.split():
-                ss += self.pdf.get_string_width(item + ' ')
-                if ss < LABEL_WIDTH - 2 * PADDING_X:
-                    cline.append(item)
-                else:
-                    prepare.append(' '.join(cline))
-                    cline = [item]
-                    ss = PADDING_X + self.pdf.get_string_width(item + ' ')
-            if cline:
-                prepare.append(' '.join(cline))
-            self.pdf.set_xy(x + PADDING_X + 2 + tw, self.goto(y, self._ln))
-            self.pdf.cell(0, 0, prepare[0])
-            if len(prepare) > 3:
-                self._lh *= LINE_SCALE**2
-                self._ln += 2 if not scaled else 2.5
-            elif len(prepare) == 3:
-                self._lh *= LINE_SCALE
-                self._ln += 1
-            for line in prepare[1:4]:
-                self._ln += 1
-                self.pdf.set_xy(x + PADDING_X + 2, self.goto(y, self._ln))
-                self.pdf.cell(0, 0, line)
-
+            self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
+            print('Current y pos:', self.pdf.get_y())
+            self.smarty_print(u'<b>{0}</b> {1}'.format(msgs['place'], place),
+                                  y_max=self.pdf.get_y()+25, font_size=SMALL_FONT_SIZE,
+                                  first_indent = -PADDING_X,
+                              right_position=x+LABEL_WIDTH-PADDING_X,
+                              left_position=x+2*PADDING_X)
         # ----------------------------------------------
 
         # ------------- Altitude info ------------------
         self._ln += 1
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         tw = self.pdf.get_string_width(msgs['alt'])
         self.pdf.cell(0, 0, msgs['alt'])
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
-        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
         self.pdf.cell(0, 0, translit(smartify_language(altitude, lang='en'),
                                      'ru', reversed=True))
 
         # ------------- Coordinates found -------------
         self._ln += 1
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         tw = self.pdf.get_string_width(msgs['coords'])
         self.pdf.cell(0, 0, msgs['coords'])
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         if latitude and longitude:
-            self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+            self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
             self.pdf.cell(0, 0, 'LAT=' + _lat_repr(latitude) + ',' +
                           ' LON=' + _lon_repr(longitude))
         # ----------------------------------------------
 
         # ----------- Date found -----------------------
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
         self.pdf.cell(0, 0, msgs['date'])
         tw = self.pdf.get_string_width(msgs['date'])
-        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         self.pdf.cell(0, 0, coldate)
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
         # -------------- Collectors --------------------
         self._ln += 1
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         self.pdf.cell(0, 0, msgs['col'])
         tw = self.pdf.get_string_width(msgs['col'])
-        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         ss = 0
         fline = []
@@ -521,10 +542,10 @@ class PDF_DOC(PDF_MIXIN):
         identified = translit(identified, 'ru', reversed=True)
         self._ln += 1
         self.pdf.set_font('DejaVub', '', SMALL_FONT_SIZE)
-        self.pdf.set_xy(x + PADDING_X, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X, self.goto_line(y, self._ln))
         self.pdf.cell(0, 0, msgs['det'])
         tw = self.pdf.get_string_width(msgs['det'])
-        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto(y, self._ln))
+        self.pdf.set_xy(x + PADDING_X + 1 + tw, self.goto_line(y, self._ln))
         self.pdf.set_font('DejaVu', '', SMALL_FONT_SIZE)
         ss = 0
         fline = []
@@ -611,7 +632,7 @@ class PDF_DOC(PDF_MIXIN):
     def _test_page(self):
         testdict = {'family': 'AWESOMEFAMILY', 'species': 'Some species',
                     'spauth': '(Somebody) Author',
-                    'date': '12 Nov 2002',
+                    'coldate': '12 Nov 2002',
                     'latitude': '12.1231',
                     'longitude': '123.212312',
                     'region': u'Приморский край',
@@ -1015,6 +1036,12 @@ class PDF_BRYOPHYTE(BARCODE):
 
 
 if __name__ == '__main__':
+
+    def test_regular():
+        p = PDF_DOC()
+        p._test_page()
+        p.create_file('regular_label.pdf')
+
     def test_bryophyte():
         test_pars = {'allspecies': [('specimen%s'%x, 'auth%s'%x, 'add%s'%x, 'ieps%s'%x, ('note%s'%x)*20)
                          for x in map(str, range(6))],
@@ -1057,18 +1084,20 @@ if __name__ == '__main__':
     def test_smarty_printing():
         sample_text = '''
         <b> this is </b> a sample text. It is really
-        interesting <b> and simple <i> text</i>. It uses different fonts </b>
+        interesting <b> and simple <i> text</i>. It uses dif<i>f</i>erent fonts </b>
         and <i>styles</i>.
         ''' * 10
 
         p = PDF_BRYOPHYTE()
-        p.smarty_print(sample_text, 0, left_position=10,
-                 first_indent=10, right_position=190,
-                 line_nums=0, force=False, font_size=30,
-                 line_height=10)
+        print("Current y=", p.pdf.get_y())
+        p.smarty_print(sample_text, left_position=10,
+                 first_indent=-5, right_position=190,
+                 y_max=50, font_size=12, line_height=20)
+        print("Current y=", p.pdf.get_y())
+
         p.create_file('smarty_text.pdf')
 
-    test_smarty_printing()
+    test_regular()
 
 
 
