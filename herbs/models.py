@@ -412,6 +412,7 @@ class HerbCounter(models.Model):
     count = models.PositiveIntegerField(default=0)
 
 
+
 @python_2_unicode_compatible
 class HerbReply(models.Model):
     REPLY_STATUSES = (('F', 'FIXED'),
@@ -436,3 +437,25 @@ class HerbReply(models.Model):
     class Meta:
         verbose_name = _('Сообщение об ошибке')
         verbose_name_plural = _('Сообщения об ошибках')
+
+
+@python_2_unicode_compatible
+class Notification(models.Model):
+    NOTE_STATUSES = (('Q', 'Quequed'),
+                     ('S', 'Sent')
+                     )
+    email = models.EmailField(blank=True, editable=False)
+    created = models.DateTimeField(auto_now_add=True, verbose_name=_('создан'))
+    status = models.CharField(max_length=1, choices=NOTE_STATUSES, default='Q',
+                              verbose_name=_('Статус'), editable=False)
+    tracked_field = models.CharField(max_length=50, default='', blank=True,
+                                      editable=False)
+    field_value = models.TextField(default='', editable=False)
+    username = models.CharField(default='', editable=False)
+    hitem = models.ForeignKey(HerbItem, blank=True, null=True,
+                              editable=False)
+
+    class Meta:
+        verbose_name = _('Правка')
+        verbose_name_plural = _('Правки')
+        ordering = ['-created']

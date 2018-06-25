@@ -13,7 +13,7 @@ from .forms import (FamilyForm, GenusForm, HerbItemForm, SpeciesForm,
                     DetHistoryForm, HerbItemFormSimple, AdditionalsForm)
 from .models import (Family, Genus, HerbItem, Species, Country,
                      HerbAcronym, DetHistory, Additionals, Subdivision,
-                     SpeciesSynonym, HerbReply)
+                     SpeciesSynonym, HerbReply, Notification)
 from django.forms import model_to_dict
 from django.utils.text import capfirst
 from django.utils import timezone
@@ -110,6 +110,68 @@ class HerbItemCustomListFilter(SimpleListFilter):
             return queryset
 
 
+# ------------ Notification behavior
+class NotificationMixin:
+    '''Creates notifications according to changes in predefined model fields'''
+
+    def make_notification(self, request, obj, form, change):
+        if not obj:
+            return
+        acronym = obj.acronym
+        username = request.user.username
+        for field_name in settings.HERBS_TRACKED_FIELDS:
+            field_value = obj.getattr(field_name, None)
+            if field_value:
+                if self._notification_condition(obj.__class__,
+                                                field_name, field_value,
+                                                acronym, username):
+                    emails = self._get_mails(obj, acronym)
+                    if emails:
+                        Notification.objects.get_or_create(tracked_field=field_name,
+                                                       field_value=field_value,
+                                                       username=username,
+                                                       hitem=obj,
+                                                       emails=emails)
+
+
+    @staticmethod
+    def _notification_condition(model, field_name, field_value, acronym, username):
+        return model.object.filter(**{field_name: field_value,
+                                  'acronym': acronym}).count() == 1
+
+
+    def _get_mails(self, obj, acronym):
+        try:
+            usernames = HerbAcronym.objects.get(acronym=acronym).allowerd_users.split(',')
+        except HerbAcronym.DoesNotExist:
+            usernames = []
+
+        if obj.subdivision:
+            subd = obj.subdivision
+            while True:
+                usernames += subd.allowed_users.split(',')
+                if subd.parent:
+                    subd = subd.parent
+                else:
+                    break
+
+        target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
+
+        final_users = []
+        if target_users:
+            umodel = get_user_model()
+            for username in target_users:
+                try:
+                    user = umodel.objects.get(username=username)
+                except umodel.DoesNotExist:
+                    continue
+                if user.has_perm('can_set_publish') and\
+                                user.email in settings.HERBS_NOTIFICATION_MAILS:
+                    final_users.append(user)
+        return ','.join([user.email for user in final_users])
+
+
+
 # -------------- Common per object permission setter ------------------------
 class PermissionMixin:
 
@@ -186,7 +248,7 @@ class GenusAdmin(AjaxSelectAdmin):
     countobjs.short_description = _('Количество объектов в БД')
 
 
-class HerbItemAdmin(PermissionMixin, AjaxSelectAdmin):
+class HerbItemAdmin(PermissionMixin, AjaxSelectAdmin, NotificationMixin):
     model = HerbItem
     search_fields = ('id', 'itemcode', 'fieldid', 'collectedby', 'identifiedby',
                      'species__genus__name', 'species__name')
@@ -465,4 +527,5 @@ admin.site.register(HerbAcronym)
 admin.site.register(Country)
 admin.site.register(Subdivision)
 admin.site.register(SpeciesSynonym)
+admin.site.register(Notification)
 admin.site.register(HerbReply, HerbReplyAdmin)

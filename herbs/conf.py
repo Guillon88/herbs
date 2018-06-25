@@ -11,6 +11,13 @@ class HerbsAppConf(AppConf):
     SPECIES_SIGNIFICANCE = (('aff.', 'affinis'),
                             ('cf.', 'confertum')
                             )
+
+    # Tracking changes feature
+    TRACKED_FIELDS = ('collectedby', 'identifiedby')
+    NOTIFICATION_MAILS = ('kislov@easydan.com', )
+    NOTIFICATION_USERS = ('scidam', )
+
+
     PAGINATION_COUNT = 20
     AUTOSUGGEST_NUM_TO_SHOW = 50
     AUTOSUGGEST_NUM_ADMIN = 30
