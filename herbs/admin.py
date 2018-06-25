@@ -114,7 +114,7 @@ class HerbItemCustomListFilter(SimpleListFilter):
 class NotificationMixin:
     '''Creates notifications according to changes in predefined model fields'''
 
-    def make_notification(self, request, obj, form, change):
+    def make_notification(self, request, obj):
         if not obj:
             return
         acronym = obj.acronym
@@ -133,12 +133,10 @@ class NotificationMixin:
                                                        hitem=obj,
                                                        emails=emails)
 
-
     @staticmethod
     def _notification_condition(model, field_name, field_value, acronym, username):
         return model.object.filter(**{field_name: field_value,
                                   'acronym': acronym}).count() == 1
-
 
     def _get_mails(self, obj, acronym):
         try:
@@ -156,7 +154,6 @@ class NotificationMixin:
                     break
 
         target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
-
         final_users = []
         if target_users:
             umodel = get_user_model()
@@ -324,6 +321,13 @@ class HerbItemAdmin(PermissionMixin, AjaxSelectAdmin, NotificationMixin):
         except (ValueError, TypeError):
             pass
         obj.save()
+        try:
+            # try to make a notification, and
+            # fail silently if something goes wrong!
+            self.make_notification(request, obj)
+        except:
+             pass
+
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super(HerbItemAdmin, self).get_readonly_fields(request, obj)

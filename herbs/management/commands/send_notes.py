@@ -3,7 +3,7 @@ from django.db import connection
 from django.utils import timezone
 from django.core.mail import get_connection
 from django.core.mail.message import EmailMultiAlternatives
-
+from django.template import Context, Template
 
 try:
     from herbs.models import Notification
@@ -39,7 +39,7 @@ class Command(BaseCommand):
                         })
                         reason = '%s : %s'.format(item.field_name, item.field_value)
                         if 'reason' not in messages[email][-1]:
-                            messages[email][-1].update({'reson': [reason]})
+                            messages[email][-1].update({'reason': [reason]})
                         else:
                             messages[email][-1]['reason'].append(reason)
 
@@ -63,88 +63,59 @@ class Command(BaseCommand):
     @staticmethod
     def _generate_html_message(msg):
         html_email_temaple = '''
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <title>Demystifying Email Design</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-</head>
-<body style="margin: 0; padding: 0;">
- <table align="center" border="1" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse;">
-  
-  <tr>
-   <td bgcolor="#ffffff" style="padding: 10px 10px 10px 10px;">
-    <h2> Сводка по изменениям в гербарии от {{created}} </h2>
-   </td>
-  </tr>
-
-  <tr>
-      <td bgcolor="#ffffff" style="padding: 40px 40px 40px 40px;">
-         <table border="1" cellpadding="0" cellspacing="0" width="100%">
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+          <title>Demystifying Email Design</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        </head>
+        <body style="margin: 0; padding: 0;">
+         <table align="center" border="1" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse;">
           <tr>
-           <td align="center">ID</td>
-           <td align="center">USERNAME</td>
-           <td align="center">DATE</td>
-           <td align="center">REASON</td>
-           <td align="center">LINK</td>
+           <td bgcolor="#ffffff" style="padding: 10px 10px 10px 10px;">
+            <h2> Сводка по изменениям в гербарии от {{created}} </h2>
+           </td>
           </tr>
-          
-          {%for item in items %}
-            {% if forloop.counter|divisibleby:2 %}
-                <tr>
-                   <td align="center">ID</td>
-                   <td align="center">USERNAME</td>
-                   <td align="center">DATE</td>
-                   <td align="center">REASON</td>
-                   <td align="center">LINK</td>
-                </tr>
-            {%else%}
-                <tr>
-                   <td align="center">ID</td>
-                   <td align="center">USERNAME</td>
-                   <td align="center">DATE</td>
-                   <td align="center">REASON</td>
-                   <td align="center">LINK</td>
-                </tr>
-            {%endif%}
-          {%endfor%}
-          
-         </table>
-      </td>
-  </tr>
-  
- </table>
-</body>
-
-
-</html>
-        
-        
-        
-        
-                <html>
-                  
-                    <table width="600" style="border:1px solid #333">
+          <tr>
+              <td bgcolor="#ffffff" style="padding: 40px 40px 40px 40px;">
+                 <table border="1" cellpadding="0" cellspacing="0" width="100%">
                   <tr>
-                   
+                   <td align="center">ID</td>
+                   <td align="center">USERNAME</td>
+                   <td align="center">DATE</td>
+                   <td align="center">REASON</td>
+                   <td align="center">LINK</td>
                   </tr>
-                  
-                  <tr>
-                    <td align="center">
-                      body 
-                      <table align="center" width="300" border="0" cellspacing="0" cellpadding="0" style="border:1px solid #ccc;">
+                  {%for item in items %}
+                    {% if forloop.counter|divisibleby:2 %}
                         <tr>
-                          <td> data </td>
-                          <td> info </td>
+                           <td align="center">{{item.id}}</td>
+                           <td align="center">{{item.username}}</td>
+                           <td align="center">{{item.date}}</td>
+                           <td align="center">{%for field in item.reason %}<p>{{field}}</p>{%endfor%}</td>
+                           <td align="center">{{item.id}}</td>
                         </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-                </html>
+                    {%else%}
+                        <tr>
+                           <td align="center">{{item.id}}</td>
+                           <td align="center">{{item.username}}</td>
+                           <td align="center">{{item.date}}</td>
+                           <td align="center">{%for field in item.reason %}<p>{{field}}</p>{%endfor%}</td>
+                           <td align="center">{{item.id}}</td>
+                        </tr>
+                    {%endif%}
+                  {%endfor%}
+                 </table>
+              </td>
+          </tr>
+         </table>
+        </body>
+        </html>
         '''
-
+        template = Template(html_email_temaple)
+        context = Context(msg)
+        return template.render(context)
 
 
 
