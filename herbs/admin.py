@@ -132,11 +132,18 @@ class NotificationMixin:
                                             acronym):
                 emails = self._get_mails(obj, acronym)
                 if emails:
-                    Notification.objects.get_or_create(tracked_field=field_name,
+                    Notification.objects.filter(tracked_field=field_name,
+                                                username=username,
+                                                hitem=obj,
+                                                emails=emails,
+                                                status='Q').delete()
+                    Notification.objects.get_or_create(
+                                                   tracked_field=field_name,
                                                    field_value=field_value,
                                                    username=username,
                                                    hitem=obj,
                                                    emails=emails)
+
             else:
                 Notification.objects.filter(tracked_field=field_name,
                                             status='Q',
@@ -149,19 +156,21 @@ class NotificationMixin:
                                   'acronym__name__iexact': acronym}).count() == 1
 
     def _get_mails(self, obj, acronym):
-        try:
-            usernames = HerbAcronym.objects.get(name__iexact=acronym).allowed_users.split(',')
-        except HerbAcronym.DoesNotExist:
-            usernames = []
-
         if obj.subdivision:
             subd = obj.subdivision
+            usernames = []
             while True:
                 usernames += subd.allowed_users.split(',')
                 if subd.parent:
                     subd = subd.parent
                 else:
                     break
+        else:
+            try:
+                usernames = HerbAcronym.objects.get(
+                    name__iexact=acronym).allowed_users.split(',')
+            except HerbAcronym.DoesNotExist:
+                usernames = []
 
         target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
         final_users = []

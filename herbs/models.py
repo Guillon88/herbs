@@ -461,6 +461,6 @@ class Notification(models.Model):
             [str(self.created), self.username])
 
     class Meta:
-        verbose_name = _('Правка')
-        verbose_name_plural = _('Правки')
+        verbose_name = _('Заметка')
+        verbose_name_plural = _('Заметки')
         ordering = ['-created']
