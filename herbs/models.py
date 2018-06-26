@@ -449,9 +449,10 @@ class Notification(models.Model):
     status = models.CharField(max_length=1, choices=NOTE_STATUSES, default='Q',
                               verbose_name=_('Статус'))
     tracked_field = models.CharField(max_length=50, default='', blank=True,
-                                     )
-    field_value = models.TextField(default='')
-    username = models.CharField(max_length=50, default='')
+                                     verbose_name=_('Поле'))
+    field_value = models.TextField(default='', verbose_name=_('Значение'))
+    username = models.CharField(max_length=50, default='',
+                                verbose_name=_('Пользователь'))
     hitem = models.ForeignKey(HerbItem, blank=True, null=True,
                               editable=False)
 

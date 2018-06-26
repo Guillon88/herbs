@@ -123,21 +123,20 @@ class NotificationMixin:
         username = request.user.username
         for field_name in settings.HERBS_TRACKED_FIELDS:
             field_value = getattr(obj, field_name, '').strip()
-            if field_value:
-                if self._notification_condition(obj.__class__,
-                                                field_name, field_value,
-                                                acronym):
-                    emails = self._get_mails(obj, acronym)
-                    if emails:
-                        Notification.objects.get_or_create(tracked_field=field_name,
-                                                       field_value=field_value,
-                                                       username=username,
-                                                       hitem=obj,
-                                                       emails=emails)
-                else:
-                    Notification.objects.filter(tracked_field=field_name,
-                                                status='Q',
-                                                hitem=obj).delete()
+            if self._notification_condition(obj.__class__,
+                                            field_name, field_value,
+                                            acronym):
+                emails = self._get_mails(obj, acronym)
+                if emails:
+                    Notification.objects.get_or_create(tracked_field=field_name,
+                                                   field_value=field_value,
+                                                   username=username,
+                                                   hitem=obj,
+                                                   emails=emails)
+            else:
+                Notification.objects.filter(tracked_field=field_name,
+                                            status='Q',
+                                            hitem=obj).delete()
 
 
     @staticmethod
@@ -530,8 +529,19 @@ class HerbReplyAdmin(admin.ModelAdmin):
     species_edit_link.short_description = _('Запись')
 
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'username', 'status', 'tracked_field', 'field_value')
+    list_display = ('created', 'username', 'status',
+                    'tracked_field', 'field_value', 'edit_link')
 
+    def edit_link(self, obj):
+        resurl = '--'
+        if obj:
+            if obj.hitem:
+                url = reverse('admin:%s_%s_change' % ('herbs', 'herbitem'),
+                              args=[obj.hitem.id])
+                resurl = '<a href="%s" title="Редактировать запись">Запись %s</a>'  % (url, obj.hitem.id)
+        return resurl
+    edit_link.allow_tags = True
+    edit_link.short_description = _('Ссылка на объект')
 
 admin.site.register(Family, FamilyAdmin)
 admin.site.register(Genus, GenusAdmin)

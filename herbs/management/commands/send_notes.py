@@ -1,14 +1,17 @@
+# coding: utf-8
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.utils import timezone
 from django.core.mail import get_connection
 from django.core.mail.message import EmailMultiAlternatives
 from django.template import Context, Template
+from django.core.urlresolvers import reverse
+
 
 try:
-    from herbs.models import Notification
+    from herbs.models import Notification, HerbItem
 except ImportError:
-    from bgi.herbs.models import Notification
+    from bgi.herbs.models import Notification, HerbItem
 
 class Command(BaseCommand):
     args = ''
@@ -16,18 +19,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         query = '''
-        SELECT DISTINCT herbs_notification.herbitem_id 
+        SELECT DISTINCT herbs_notification.hitem_id
         FROM herbs_notification INNER JOIN herbs_herbitem
-        ON herbs_notification.herbitem_id = herbs_herbitem.id;
-        WHERE status='Q'
-        ORDER BY `created` DESC;
+        ON herbs_notification.hitem_id = herbs_herbitem.id
+        WHERE herbs_notification.status='Q'
+        ORDER BY herbs_notification.created DESC;
         '''
         cursor = connection.cursor()
         cursor.execute(query)
 
         messages = dict()
-        for obj_id in cursor.fetchall():
-            for item in Notification.objects.filter(id=obj_id):
+        for obj_id in [item[0] for item in cursor.fetchall()]:
+            for item in Notification.objects.filter(hitem__id=obj_id):
                 if item.emails:
                     for email in item.emails.split(','):
                         if email not in messages:
@@ -35,9 +38,11 @@ class Command(BaseCommand):
                         messages[email].append({
                             'id': obj_id,
                             'date': str(item.created),
-                            'username': item.username
+                            'username': item.username,
+                            'link': 'http://botsad.ru' + reverse('admin:%s_%s_change' % ('herbs', 'herbitem'),
+                              args=[obj_id])
                         })
-                        reason = '%s : %s'.format(item.field_name, item.field_value)
+                        reason = u'<{}> : <{}>'.format(HerbItem._meta.get_field(item.tracked_field).verbose_name.decode('utf-8'), item.field_value)
                         if 'reason' not in messages[email][-1]:
                             messages[email][-1].update({'reason': [reason]})
                         else:
@@ -47,7 +52,6 @@ class Command(BaseCommand):
                             messages[email][-1].update({'note_ids': [item.id]})
                         else:
                             messages[email][-1]['note_ids'].append(item.id)
-
         for email in messages:
             html = self._generate_html_message(messages[email])
             try:
@@ -56,7 +60,8 @@ class Command(BaseCommand):
                                         [email], connection=get_connection(fail_silently=False))
                 mail_msg.attach_alternative(html, 'text/html')
                 mail_msg.send()
-                Notification.objects.filter(id__in=messages[email]['note_ids']).update(status='S')
+                ids = sum([x['note_ids'] for x in messages[email]], [])
+                Notification.objects.filter(id__in=ids).update(status='S')
             except:
                 pass
 
@@ -73,36 +78,36 @@ class Command(BaseCommand):
         <body style="margin: 0; padding: 0;">
          <table align="center" border="1" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse;">
           <tr>
-           <td bgcolor="#ffffff" style="padding: 10px 10px 10px 10px;">
-            <h2> Сводка по изменениям в гербарии от {{created}} </h2>
+           <td bgcolor="#e2f4f3" style="padding: 10px 10px 10px 10px;">
+            <h2 style="text-align:center"> Сводка по изменениям в гербарии от {{created}} </h2>
            </td>
           </tr>
           <tr>
               <td bgcolor="#ffffff" style="padding: 40px 40px 40px 40px;">
                  <table border="1" cellpadding="0" cellspacing="0" width="100%">
-                  <tr>
+                  <tr style="background-color: #daedbb">
                    <td align="center">ID</td>
                    <td align="center">USERNAME</td>
                    <td align="center">DATE</td>
-                   <td align="center">REASON</td>
-                   <td align="center">LINK</td>
+                   <td align="center">REASON<br> &lt;FIELD&gt;:&lt;VALUE&gt;</td>
+                   <td align="center">EDIT<br>LINK</td>
                   </tr>
                   {%for item in items %}
                     {% if forloop.counter|divisibleby:2 %}
-                        <tr>
+                        <tr style="background-color: #d9e5ef">
                            <td align="center">{{item.id}}</td>
                            <td align="center">{{item.username}}</td>
                            <td align="center">{{item.date}}</td>
                            <td align="center">{%for field in item.reason %}<p>{{field}}</p>{%endfor%}</td>
-                           <td align="center">{{item.id}}</td>
+                           <td align="center"><a href="{{item.link|safe}}">Edit</a></td>
                         </tr>
                     {%else%}
-                        <tr>
+                        <tr style="background-color: #d7dce1">
                            <td align="center">{{item.id}}</td>
                            <td align="center">{{item.username}}</td>
                            <td align="center">{{item.date}}</td>
                            <td align="center">{%for field in item.reason %}<p>{{field}}</p>{%endfor%}</td>
-                           <td align="center">{{item.id}}</td>
+                           <td align="center"><a href="{{item.link|safe}}">Edit</a></td>
                         </tr>
                     {%endif%}
                   {%endfor%}
@@ -114,7 +119,7 @@ class Command(BaseCommand):
         </html>
         '''
         template = Template(html_email_temaple)
-        context = Context(msg)
+        context = Context({'items': msg, 'created': timezone.now()})
         return template.render(context)
 
 
