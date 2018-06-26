@@ -14,8 +14,13 @@ class HerbsAppConf(AppConf):
 
     # Tracking changes feature
     TRACKED_FIELDS = ('collectedby', 'identifiedby')
-    NOTIFICATION_MAILS = ('kislov@easydan.com', )
-    NOTIFICATION_USERS = ('scidam', )
+    NOTIFICATION_MAILS = ('kislov@easydan.com', ) # allowed emails
+    NOTIFICATION_USERS = ('scidam', ) # user's allowed to send email to
+
+    # Objects edited by these user's aren't tracked by the system
+    EXCLUDED_FROM_NOTIFICATION = ('', ) # User's excluded from notification;
+
+
 
 
     PAGINATION_COUNT = 20

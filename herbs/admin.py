@@ -121,6 +121,10 @@ class NotificationMixin:
             return
         acronym = obj.acronym.name
         username = request.user.username
+
+        if username in settings.HERBS_EXCLUDED_FROM_NOTIFICATION:
+            return
+
         for field_name in settings.HERBS_TRACKED_FIELDS:
             field_value = getattr(obj, field_name, '').strip()
             if self._notification_condition(obj.__class__,
