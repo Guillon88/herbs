@@ -61,3 +61,5 @@ class HerbsAppConf(AppConf):
 
     class Meta:
         prefix = 'herbs'
+
+

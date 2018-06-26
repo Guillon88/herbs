@@ -444,16 +444,20 @@ class Notification(models.Model):
     NOTE_STATUSES = (('Q', 'Quequed'),
                      ('S', 'Sent')
                      )
-    email = models.EmailField(blank=True, editable=False)
+    emails = models.TextField(default='', blank=True, editable=False)
     created = models.DateTimeField(auto_now_add=True, verbose_name=_('создан'))
     status = models.CharField(max_length=1, choices=NOTE_STATUSES, default='Q',
-                              verbose_name=_('Статус'), editable=False)
+                              verbose_name=_('Статус'))
     tracked_field = models.CharField(max_length=50, default='', blank=True,
-                                     editable=False)
-    field_value = models.TextField(default='', editable=False)
-    username = models.CharField(max_length=50, default='', editable=False)
+                                     )
+    field_value = models.TextField(default='')
+    username = models.CharField(max_length=50, default='')
     hitem = models.ForeignKey(HerbItem, blank=True, null=True,
                               editable=False)
+
+    def __str__(self):
+        return '|'.join(
+            [str(self.created), self.username])
 
     class Meta:
         verbose_name = _('Правка')

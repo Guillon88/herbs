@@ -110,21 +110,23 @@ class HerbItemCustomListFilter(SimpleListFilter):
             return queryset
 
 
-# ------------ Notification behavior
+# ------------ Notification base bahavior --------------
 class NotificationMixin:
-    '''Creates notifications according to changes in predefined model fields'''
+    '''
+    Creates notifications according to changes in predefined model fields
+    '''
 
     def make_notification(self, request, obj):
         if not obj:
             return
-        acronym = obj.acronym
+        acronym = obj.acronym.name
         username = request.user.username
         for field_name in settings.HERBS_TRACKED_FIELDS:
-            field_value = obj.getattr(field_name, None)
+            field_value = getattr(obj, field_name, '').strip()
             if field_value:
                 if self._notification_condition(obj.__class__,
                                                 field_name, field_value,
-                                                acronym, username):
+                                                acronym):
                     emails = self._get_mails(obj, acronym)
                     if emails:
                         Notification.objects.get_or_create(tracked_field=field_name,
@@ -132,15 +134,20 @@ class NotificationMixin:
                                                        username=username,
                                                        hitem=obj,
                                                        emails=emails)
+                else:
+                    Notification.objects.filter(tracked_field=field_name,
+                                                status='Q',
+                                                hitem=obj).delete()
+
 
     @staticmethod
-    def _notification_condition(model, field_name, field_value, acronym, username):
-        return model.object.filter(**{field_name: field_value,
-                                  'acronym': acronym}).count() == 1
+    def _notification_condition(model, field_name, field_value, acronym):
+        return model.objects.filter(**{'%s__iexact' % field_name: field_value,
+                                  'acronym__name__iexact': acronym}).count() == 1
 
     def _get_mails(self, obj, acronym):
         try:
-            usernames = HerbAcronym.objects.get(acronym=acronym).allowerd_users.split(',')
+            usernames = HerbAcronym.objects.get(name__iexact=acronym).allowed_users.split(',')
         except HerbAcronym.DoesNotExist:
             usernames = []
 
@@ -522,6 +529,9 @@ class HerbReplyAdmin(admin.ModelAdmin):
     species_edit_link.allow_tags = True
     species_edit_link.short_description = _('Запись')
 
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'username', 'status', 'tracked_field', 'field_value')
+
 
 admin.site.register(Family, FamilyAdmin)
 admin.site.register(Genus, GenusAdmin)
@@ -531,5 +541,5 @@ admin.site.register(HerbAcronym)
 admin.site.register(Country)
 admin.site.register(Subdivision)
 admin.site.register(SpeciesSynonym)
-admin.site.register(Notification)
+admin.site.register(Notification, NotificationAdmin)
 admin.site.register(HerbReply, HerbReplyAdmin)
