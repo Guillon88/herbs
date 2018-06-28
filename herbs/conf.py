@@ -14,8 +14,8 @@ class HerbsAppConf(AppConf):
 
     # Tracking changes feature
     TRACKED_FIELDS = ('collectedby', 'identifiedby')
-    NOTIFICATION_MAILS = ('kislov@easydan.com', ) # allowed emails
-    NOTIFICATION_USERS = ('scidam', 'bryophyte') # user's allowed to send email to
+    NOTIFICATION_MAILS = ('kislov@easydan.com', 'vabakalin@gmail.com' ) # allowed emails
+    NOTIFICATION_USERS = ('scidam', 'bryophyte', 'labcrypto') # user's allowed for email sending
 
     # Objects edited by these user's aren't tracked by the system
     EXCLUDED_FROM_NOTIFICATION = ('', ) # User's excluded from notification;
@@ -53,6 +53,8 @@ class HerbsAppConf(AppConf):
                                   ]
 
     SOURCE_IMAGE_PATHS = '/home/scidam/webapps/herbviewer/snapshots/'
+    SOURCE_IMAGE_FILE_LIST = 'http://herbstatic.botsad.ru/images.txt'
+    SOURCE_IMAGE_FILE_LIST_TIMEOUT = 5
     SOURCE_IMAGE_THUMB = 'ts'
     SOURCE_IMAGE_URL = 'http://botsad.ru/herbarium/view/snapshots'
     SOURCE_IMAGE_VIEWER = 'http://botsad.ru/herbarium/view/'
