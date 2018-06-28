@@ -30,11 +30,16 @@ import gc
 import csv
 import os
 from .hlabel import PDF_DOC, BARCODE, PDF_BRYOPHYTE
+
 try:
     from django.core.cache import cache
 except (ImportError,ImproperlyConfigured):
     cache = None
 
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 allowed_image_pat=re.compile(settings.HERBS_SOURCE_IMAGE_PATTERN)
 acronym_pat_ = re.compile(r'([A-Z]{1,10})(\d+)')
@@ -242,9 +247,9 @@ def get_data(request):
                             Q(country__name_en__icontains=data['country'])]
 
         bigquery += [Q(region__icontains=data['place'])|
-                        Q(detailed__icontains=data['place'])|
-                        Q(district__icontains=data['place'])|
-                        Q(note__icontains=data['place'])] if data['place'] else []
+                     Q(detailed__icontains=data['place'])|
+                     Q(district__icontains=data['place'])|
+                     Q(note__icontains=data['place'])] if data['place'] else []
 
         # dates
         if data['colend'] and data['colstart']:
@@ -856,7 +861,6 @@ def handle_image(request, afile):
         pass
 
 def get_pending_images(acronym=''):
-
     if cache:
         cval = cache.get(settings.HERBS_SOURCE_IMAGE_LIST_KEY, '')
         if cval:
@@ -873,10 +877,19 @@ def get_pending_images(acronym=''):
             []) if j.startswith(acronym)]
     return imgs
 
+
 def is_exists(acronym, id):
     file_set1 = ','.join(get_pending_images(acronym))
-    file_set2 = ','.join({j for j in sum(
-        [c for a, b, c in os.walk(settings.HERBS_SOURCE_IMAGE_PATHS)], [])})
+    if settings.HERBS_SOURCE_IMAGE_FILE_LIST:
+        try:
+            afile = urlopen(settings.HERBS_SOURCE_IMAGE_FILE_LIST,
+                            timeout=settings.HERBS_SOURCE_IMAGE_FILE_LIST_TIMEOUT)
+            file_set2 = ','.join(afile.readlines())
+        except:
+            file_set2 = ''
+    else:
+        file_set2 = ','.join({j for j in sum(
+            [c for a, b, c in os.walk(settings.HERBS_SOURCE_IMAGE_PATHS)], [])})
     fileset = ','.join([file_set1, file_set2])
     return (acronym + id) in fileset
 

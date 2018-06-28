@@ -171,7 +171,6 @@ class NotificationMixin:
                     name__iexact=acronym).allowed_users.split(',')
             except HerbAcronym.DoesNotExist:
                 usernames = []
-
         target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
         final_users = []
         if target_users:
@@ -179,6 +178,7 @@ class NotificationMixin:
             for username in target_users:
                 try:
                     user = umodel.objects.get(username=username)
+
                 except umodel.DoesNotExist:
                     continue
                 if user.has_perm('can_set_publish') and\

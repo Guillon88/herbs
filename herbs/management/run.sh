@@ -17,7 +17,6 @@ sleep 10
 mkdir -p "$homedir/source/local"
 mkdir -p "$homedir/source/remote"
 
-
 echo "Mounting output directory"
 sshfs scidam@myremote:/home/scidam/webapps/herbviewer/snapshots $homedir/output
 
