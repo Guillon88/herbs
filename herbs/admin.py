@@ -542,8 +542,12 @@ class HerbReplyAdmin(admin.ModelAdmin):
 
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'username', 'status',
-                    'tracked_field', 'field_value', 'edit_link', 'emails')
+                    'tracked_field', 'field_value', 'edit_link')
     readonly_fields = ('username', 'emails', 'tracked_field', 'field_value')
+    list_filter = ('status', 'username')
+    search_fields = ('username', 'tracked_field', 'field_value')
+    filter_horizontal = ('created', )
+
     def edit_link(self, obj):
         resurl = '--'
         if obj:
@@ -554,6 +558,9 @@ class NotificationAdmin(admin.ModelAdmin):
         return resurl
     edit_link.allow_tags = True
     edit_link.short_description = _('Ссылка на объект')
+
+    def has_delete_permission(self, request, obj=None):
+         return request.user.is_superuser
 
 admin.site.register(Family, FamilyAdmin)
 admin.site.register(Genus, GenusAdmin)
