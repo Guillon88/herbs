@@ -444,7 +444,7 @@ class Notification(models.Model):
     NOTE_STATUSES = (('Q', 'Quequed'),
                      ('S', 'Sent')
                      )
-    emails = models.TextField(default='', blank=True, editable=False)
+    emails = models.TextField(default='', blank=True)
     created = models.DateTimeField(auto_now_add=True, verbose_name=_('создан'))
     status = models.CharField(max_length=1, choices=NOTE_STATUSES, default='Q',
                               verbose_name=_('Статус'))

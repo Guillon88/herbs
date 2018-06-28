@@ -543,8 +543,8 @@ class HerbReplyAdmin(admin.ModelAdmin):
 
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'username', 'status',
-                    'tracked_field', 'field_value', 'edit_link')
-
+                    'tracked_field', 'field_value', 'edit_link', 'emails')
+    readonly_fields = ('username', 'emails', 'tracked_field', 'field_value')
     def edit_link(self, obj):
         resurl = '--'
         if obj:
