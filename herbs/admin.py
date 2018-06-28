@@ -178,10 +178,9 @@ class NotificationMixin:
             for username in target_users:
                 try:
                     user = umodel.objects.get(username=username)
-
                 except umodel.DoesNotExist:
                     continue
-                if user.has_perm('can_set_publish') and\
+                if user.has_perm('herbs.can_set_publish') and\
                                 user.email in settings.HERBS_NOTIFICATION_MAILS:
                     final_users.append(user)
         return ','.join([user.email for user in final_users])
