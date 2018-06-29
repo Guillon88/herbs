@@ -13,7 +13,7 @@ class HerbsAppConf(AppConf):
                             )
 
     # Tracking changes feature
-    TRACKED_FIELDS = ('collectedby', 'identifiedby', 'region', 'district', 'species__id')
+    TRACKED_FIELDS = ('collectedby', 'identifiedby', 'region', 'district', 'species')
     NOTIFICATION_MAILS = ('kislov@easydan.com', 'vabakalin@gmail.com' ) # allowed emails
     NOTIFICATION_USERS = ('scidam', 'bryophyte', 'labcrypto') # user's allowed for email sending
 

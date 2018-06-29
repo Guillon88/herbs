@@ -9,6 +9,7 @@ from django.conf.urls import url
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext as _
+from django.db import models
 from .forms import (FamilyForm, GenusForm, HerbItemForm, SpeciesForm,
                     DetHistoryForm, HerbItemFormSimple, AdditionalsForm)
 from .models import (Family, Genus, HerbItem, Species, Country,
@@ -19,6 +20,7 @@ from django.utils.text import capfirst
 from django.utils import timezone
 from django.conf import settings
 from datetime import timedelta
+from six import string_types
 import random
 import string
 import json
@@ -126,7 +128,21 @@ class NotificationMixin:
             return
 
         for field_name in settings.HERBS_TRACKED_FIELDS:
-            field_value = getattr(obj, field_name, '').strip()
+            field_value = getattr(obj, field_name, '')
+            friendly_value = ''
+            if isinstance(field_value, models.Model):
+                field_name = field_name + '__pk'
+                friendly_value = str(field_value)
+                field_value = getattr(field_value, 'pk')
+                friendly_value += ' ({})'.format(field_value)
+                if field_value is None:
+                    field_value = ''
+            elif isinstance(field_value, string_types):
+                field_value = field_value.strip()
+                friendly_value = field_value
+            else:
+                field_value = ''
+
             if self._notification_condition(obj.__class__,
                                             field_name, field_value,
                                             acronym):
@@ -139,7 +155,7 @@ class NotificationMixin:
                                                 status='Q').delete()
                     Notification.objects.get_or_create(
                                                    tracked_field=field_name,
-                                                   field_value=field_value,
+                                                   field_value=friendly_value,
                                                    username=username,
                                                    hitem=obj,
                                                    emails=emails)
@@ -166,11 +182,19 @@ class NotificationMixin:
                 else:
                     break
         else:
+            users_to_be_removed = []
+            for subd in Subdivision.objects.all():
+                users_to_be_removed.append(subd.allowed_users.split(','))
             try:
                 usernames = HerbAcronym.objects.get(
                     name__iexact=acronym).allowed_users.split(',')
             except HerbAcronym.DoesNotExist:
                 usernames = []
+
+            # remove users belonging to subdivisions
+            users_to_be_removed = sum(users_to_be_removed, [])
+            usernames = list(set(usernames) - set(users_to_be_removed))
+
         target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
         final_users = []
         if target_users:
