@@ -121,7 +121,7 @@ class NotificationMixin:
     def make_notification(self, request, obj):
         if not obj:
             return
-        acronym = obj.acronym.name
+        acronym = obj.acronym.name if obj.acronym else ''
         username = request.user.username
 
         if username in settings.HERBS_EXCLUDED_FROM_NOTIFICATION:
@@ -149,9 +149,7 @@ class NotificationMixin:
                 emails = self._get_mails(obj, acronym)
                 if emails:
                     Notification.objects.filter(tracked_field=field_name,
-                                                username=username,
                                                 hitem=obj,
-                                                emails=emails,
                                                 status='Q').delete()
                     Notification.objects.get_or_create(
                                                    tracked_field=field_name,
@@ -172,16 +170,7 @@ class NotificationMixin:
                                   'acronym__name__iexact': acronym}).count() == 1
 
     def _get_mails(self, obj, acronym):
-        if obj.subdivision:
-            subd = obj.subdivision
-            usernames = []
-            while True:
-                usernames += subd.allowed_users.split(',')
-                if subd.parent:
-                    subd = subd.parent
-                else:
-                    break
-        else:
+        if acronym:
             users_to_be_removed = []
             for subd in Subdivision.objects.all():
                 users_to_be_removed.append(subd.allowed_users.split(','))
@@ -190,10 +179,20 @@ class NotificationMixin:
                     name__iexact=acronym).allowed_users.split(',')
             except HerbAcronym.DoesNotExist:
                 usernames = []
-
             # remove users belonging to subdivisions
             users_to_be_removed = sum(users_to_be_removed, [])
             usernames = list(set(usernames) - set(users_to_be_removed))
+        else:
+            usernames = []
+
+        if obj.subdivision:
+            subd = obj.subdivision
+            while True:
+                usernames += subd.allowed_users.split(',')
+                if subd.parent:
+                    subd = subd.parent
+                else:
+                    break
 
         target_users = list(set(settings.HERBS_NOTIFICATION_USERS).intersection(set(usernames)))
         final_users = []
