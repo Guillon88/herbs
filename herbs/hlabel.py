@@ -5,15 +5,20 @@ import fpdf
 import tempfile
 import qrcode
 import os
-from django.conf import settings
 from PIL import Image
 
 if __name__ == '__main__':
     from transliterate import translit
     def smartify_language(value, lang=''):
         return value
+
+    SIGNIFICANCE = (('aff.', 'affinis'),
+                    ('cf.', 'confertum')
+                    )
+    settings = None
 else:
     from .utils import translit, smartify_language, SIGNIFICANCE
+    from django.conf import settings
 
 try:
     from HTMLParser import HTMLParser
@@ -116,6 +121,12 @@ def insert_qr(pdf, x, y, code='1234567', lw=LABEL_WIDTH, lh=LABEL_HEIGHT):
             tmpfile.flush()
             pdf.set_xy(x + lw - QR_SIZE - 2, y + lh - QR_SIZE - 4)
             pdf.image(temp_name, w=QR_SIZE, h=QR_SIZE)
+    except TypeError:
+        with open(temp_name, 'wb') as tmpfile:
+            img.save(tmpfile)
+            tmpfile.flush()
+            pdf.set_xy(x + lw - QR_SIZE - 2, y + lh - QR_SIZE - 4)
+            pdf.image(temp_name, w=QR_SIZE, h=QR_SIZE)
     finally:
         try:
             os.remove(temp_name)
@@ -165,8 +176,6 @@ class CustomParser(HTMLParser, object):
     @property
     def parsed(self):
         return self._data_
-
-
 
 
 class PDF_MIXIN(object):
@@ -1154,7 +1163,7 @@ if __name__ == '__main__':
                      'fieldid': 'fox-3',
                      'acronym': 'VBGI',
                      'institute': 'Botanical Garden Institute',
-                     'note': 'This speciemen was never been collected, be careful'*3,
+                     'note': 'This speciemen was never <i>been</i> collected, be careful'*3,
                      'detdate': '13 Feb 2018 - 13 Feb 2018 -13 Feb 2018',
                      'district': 'Dirty place behind in the yard',
                      'gpsbased': 'True',
