@@ -100,6 +100,13 @@ class HerbItemForm(forms.ModelForm):
         self._verify_dates(data)
         return data
 
+    def clean_collectedby(self):
+        data = self.cleaned_data['collectedby']
+        return data.strip()
+
+    def clean_identifiedby(self):
+        data = self.cleaned_data['identifiedby']
+        return data.strip()
 
     def clean(self):
         '''Checking consistency for dates '''
@@ -159,6 +166,11 @@ class DetHistoryForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False,
                                      label=_("Переопределелил(и)"),
                                      attrs={'size': CS})
+    def clean_identifiedby(self):
+        data = self.cleaned_data['identifiedby']
+        return data.strip()
+
+
 
 
 class AdditionalsForm(forms.ModelForm):
@@ -168,6 +180,10 @@ class AdditionalsForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False,
                                      label=_("Определелил(и)"),
                                      attrs={'size': CS})
+
+    def clean_identifiedby(self):
+        data = self.cleaned_data['identifiedby']
+        return data.strip()
 
 
 class RectSelectorForm(forms.Form):
