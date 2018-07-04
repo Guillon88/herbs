@@ -11,11 +11,10 @@ if __name__ == '__main__':
     from transliterate import translit
     def smartify_language(value, lang=''):
         return value
-
     SIGNIFICANCE = (('aff.', 'affinis'),
                     ('cf.', 'confertum')
                     )
-    settings = None
+    settings = None # mocking for testing ...
 else:
     from .utils import translit, smartify_language, SIGNIFICANCE
     from django.conf import settings
@@ -233,31 +232,42 @@ class PDF_MIXIN(object):
         if self.is_hieroglyph(sample):
             pass
 
-    def smarty_print(self, txt, y,  left_position=0,
+    @staticmethod
+    def choose_font(fs='', sample=''):
+        if fs == '':
+            return 'DejaVu'
+        elif fs == 'i':
+            return 'DejaVui'
+        elif fs == 'b':
+            return 'DejaVub'
+        elif fs == 'bi' or fs == 'ib':
+            return 'DejaVubi'
+        else:
+            return 'DejaVu'
+
+    def smarty_print(self, txt, lh, y=None, left_position=0,
                      first_indent=10, right_position=10,
                      line_nums=4, force=False, font_size=10):
 
-        def choose_font(fs=''):
-            if fs == '':
-                return 'DejaVu'
-            elif fs == 'i':
-                return 'DejaVui'
-            elif fs == 'b':
-                return 'DejaVub'
-            elif fs == 'bi' or fs == 'ib':
-                return 'DejaVubi'
-            else:
-                return 'DejaVu'
+
+        def strip_item(item):
+            return [item[0].strip(), item[1], item[2]]
 
         parser = CustomParser()
         done = False
+
+        if y:
+            ypos = y + lh / 2.0
+        else:
+            ypos = self.pdf.get_y() + lh / 2.0
+
         while not done:
             parser.feed(txt)
             line_number = 0
             lines = [[]]
             cline_width = 0
             for item in parser.parsed:
-                self.pdf.set_font(choose_font(item[-1]), '', font_size)
+                self.pdf.set_font(self.choose_font(item[-1]), '', font_size)
                 _splitted = item[0].split()
                 space_flag = '' + ('post' if item[0][-1] == ' ' else '') + \
                              ('pre' if item[0][0] == ' ' else '')
@@ -270,7 +280,7 @@ class PDF_MIXIN(object):
                     word_to_print = word
                     if 'post' in space_flag and ind == len(_splitted) - 1:
                         word_to_print += ' '
-                    elif 'pre' in space_flag and ind == 0 and not lines[-1]:
+                    elif 'pre' in space_flag and ind == 0: # REMOVED not lines[-1]
                         word_to_print = ' ' + word_to_print
                     if len(_splitted) > 1 and ind != len(_splitted) - 1:
                         word_to_print += ' '
@@ -279,13 +289,11 @@ class PDF_MIXIN(object):
                     cline_width += current_width
                     if (cline_width > allowed_line_length) and lines[-1]:
                         lines.append([])
-                        cline_width = 0
+                        cline_width = current_width
                         line_number += 1
-
-                    lines[-1].append((word_to_print, choose_font(item[-1])))
-                    print('Allowed length = ',allowed_line_length)
-                    print('Line # {}, cont={} ; clinew = {}'.format(line_number, lines[-1], cline_width))
-
+                    lines[-1].append((word_to_print,
+                                      self.pdf.get_string_width(word_to_print.strip()),
+                                      self.choose_font(item[-1])))
 
             if font_size < 2:
                 done = True
@@ -294,15 +302,53 @@ class PDF_MIXIN(object):
             else:
                 done = True
         xpos = left_position + first_indent
-        for line in lines:
-            ypos = self.goto(y, self._ln)
-            for item in line:
-                self.pdf.set_font(item[-1], '', font_size)
-                self.pdf.set_xy(xpos, ypos)
-                self.pdf.cell(0, 0, item[0])
-                xpos += self.pdf.get_string_width(item[0])
-            self._ln += 1
+        for indl, line in enumerate(lines):
+            preset = []
+            for ind, item in enumerate(line):
+                if ind == 0:
+                    preset.append(strip_item(item))
+                    if item[0].endswith(' '):
+                        preset.append(' ')
+                elif ind == len(line) - 1:
+                    if item[0].startswith(' '):
+                        preset.append(' ')
+                    preset.append(strip_item(item))
+                else:
+                    if item[0].startswith(' '):
+                        preset.append(' ')
+                    preset.append(strip_item(item))
+                    if item[0].endswith(' '):
+                        preset.append(' ')
+
+            n_spaces = preset.count(' ')
+
+            if indl == 0:
+                allowed_line_length = right_position - left_position - first_indent
+            else:
+                allowed_line_length = right_position - left_position
+            cum_width = sum(map(lambda x: x[1], filter(lambda x: isinstance(x, list), preset)))
+
+            if n_spaces:
+                sep_w = (allowed_line_length - cum_width) / float(n_spaces)
+            else:
+                sep_w = 0
+
+            if indl == len(lines) - 1:
+                self.pdf.set_font(preset[0][-1], '', font_size)
+                sep_w = self.pdf.get_string_width(' ')
+
+
+            for item in preset:
+                if isinstance(item, list):
+                    self.pdf.set_font(item[-1], '', font_size)
+                    self.pdf.set_xy(xpos, ypos)
+                    self.pdf.cell(0, 0, item[0])
+                    xpos += item[1]
+                else:
+                    xpos += sep_w
+            ypos += lh
             xpos = left_position
+        self.pdf.set_y(ypos - lh / 2.0)
 
 
 class PDF_DOC(PDF_MIXIN):
@@ -1122,8 +1168,15 @@ class PDF_BRYOPHYTE(BARCODE):
                                      ] if x])
 
             self.pdf.set_x(BRYOPHYTE_LEFT_MARGIN + BRYOPHYTE_MARGIN_EXTRA)
-            self.pdf.multi_cell(label_width -
-                                BRYOPHYTE_MARGIN_EXTRA, self._lh, main_info)
+            if main_info:
+                self.smarty_print(main_info, self._lh,
+                              left_position=BRYOPHYTE_LEFT_MARGIN + BRYOPHYTE_MARGIN_EXTRA,
+                              first_indent=0,
+                              right_position=BRYOPHYTE_LEFT_MARGIN + label_width,
+                              font_size=self._sfs)
+
+            # self.pdf.multi_cell(label_width -
+            #                     BRYOPHYTE_MARGIN_EXTRA, self._lh, main_info)
 
             # check if the block above is overlapped with the barcode
             if self.pdf.get_y() >= (DEFAULT_PAGE_HEIGHT - BARCODE_ITEM_HEIGHT - 11):
@@ -1147,7 +1200,6 @@ class PDF_BRYOPHYTE(BARCODE):
                                                barcode_width))
                 self.pdf.multi_cell(label_width,
                                     self._lh, det_info)
-
 
             if addinfo:
                 self.pdf.set_font('DejaVu', '', self._nnfs)
@@ -1208,7 +1260,7 @@ if __name__ == '__main__':
                      'fieldid': 'fox-3',
                      'acronym': 'VBGI',
                      'institute': 'Botanical Garden Institute',
-                     'note': 'This speciemen was never <i>been</i> collected, be careful'*3,
+                     'note': 'Th<ig>is</ig> spe<b>ciem</b>en was never <i>been</i> collected, be careful'*5,
                      'detdate': '13 Feb 2018 - 13 Feb 2018 -13 Feb 2018',
                      'district': 'Dirty place behind in the yard',
                      'gpsbased': 'True',
@@ -1243,11 +1295,11 @@ if __name__ == '__main__':
 
     def test_smarty_cell():
         pdf = PDF_DOC()
-        pdf.smarty_print('sample text <b>oa </b>' * 10, 20, left_position=20,
-                     first_indent=30, right_position=100,)
+        pdf.smarty_print('s<b>a<i>m</i>p</b>le <i>t</i>ext <b>oa </b>' * 15, 20, left_position=20,
+                     first_indent=30, right_position=100)
         pdf.create_file('sm.pdf')
 
-    test_smarty_cell()
+    test_bryophyte()
 
 
 
