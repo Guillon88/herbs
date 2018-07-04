@@ -18,6 +18,28 @@ except ImportError:
     ReCaptchaField = None
 
 
+# ---------- tinymce integration
+
+# try:
+#     from tinymce.widgets import TinyMCE
+# except ImportError:
+TinyMCE = None
+
+tinymce_fieldset = {
+    'theme': 'advanced',
+    'theme_advanced_buttons1': "bold,italic",
+    'theme_advanced_buttons2': "",
+    'theme_advanced_buttons3': "",
+    'cleanup_on_startup' : True,
+    'width':'50%',
+    'height':'400px',
+    'theme_advanced_text_colors' : "000000,ff0000,0000ff",
+}
+
+# ------------------------------
+
+
+
 CS = getattr(settings,
              '%s_CH_SIZE' % HerbsAppConf.Meta.prefix.upper(), 80)
 
@@ -149,9 +171,17 @@ class HerbItemForm(forms.ModelForm):
         model = HerbItem
 
     species = AutoCompleteSelectField('species', required=True, help_text=None, label=_("Вид"))
-    detailed = forms.CharField(widget=forms.Textarea, required=False, label=_('Место сбора'))
+    if TinyMCE:
+        note = forms.CharField(widget=TinyMCE(mce_attrs=tinymce_fieldset),
+                               required=False, label=_('Заметки'))
+        detailed = forms.CharField(widget=TinyMCE(mce_attrs=tinymce_fieldset),
+                                   required=False,
+                                   label=_('Место сбора'))
+    else:
+        note = forms.CharField(widget=forms.Textarea, required=False, label=_('Заметки'))
+        detailed = forms.CharField(widget=forms.Textarea, required=False,
+                                   label=_('Место сбора'))
     detailed.help_text = _("локализация, экоусловия")
-    note = forms.CharField(widget=forms.Textarea, required=False, label=_('Заметки'))
     country = AutoCompleteSelectField('country', required=False, help_text=None, label=_("Страна"))
     region = AutoCompleteField('region', required=False, help_text=None, label=_("Регион"), attrs={'size': CS})
     district = AutoCompleteField('district', required=False, help_text=None, label=_("Район"), attrs={'size': CS})
