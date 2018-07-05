@@ -42,7 +42,7 @@ class Command(BaseCommand):
                             'link': 'http://botsad.ru' + reverse('admin:%s_%s_change' % ('herbs', 'herbitem'),
                               args=[obj_id])
                         })
-                        reason = u'<{}> : <{}>'.format(HerbItem._meta.get_field(item.tracked_field).verbose_name.decode('utf-8'), item.field_value)
+                        reason = u'<{}> : <{}>'.format(HerbItem._meta.get_field(item.tracked_field.split('_')[0]).verbose_name.decode('utf-8'), item.field_value)
                         if 'reason' not in messages[email][-1]:
                             messages[email][-1].update({'reason': [reason]})
                         else:

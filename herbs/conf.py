@@ -14,8 +14,10 @@ class HerbsAppConf(AppConf):
 
     # Tracking changes feature
     TRACKED_FIELDS = ('collectedby', 'identifiedby', 'region', 'district', 'species')
-    NOTIFICATION_MAILS = ('kislov@easydan.com', 'vabakalin@gmail.com' ) # allowed emails
-    NOTIFICATION_USERS = ('scidam', 'bryophyte', 'labcrypto') # user's allowed for email sending
+    NOTIFICATION_MAILS = ('kislov@easydan.com', 'vabakalin@gmail.com',
+                          'pimenova_garden@mail.ru', 'stupnikovat@yandex.ru') # allowed emails
+    NOTIFICATION_USERS = ('scidam', 'bryophyte', 'labcrypto', 'pimenova',
+                          'stupnikova') # user's allowed for email sending
 
     # Objects edited by these user's aren't tracked by the system
     EXCLUDED_FROM_NOTIFICATION = ('', ) # User's excluded from notification;

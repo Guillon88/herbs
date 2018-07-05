@@ -338,3 +338,10 @@ class ReplyForm(forms.Form):
                                   max_length=2000)
     if ReCaptchaField:
         captcha = ReCaptchaField(attrs={'lang': 'en'})
+
+
+class BulkChangeForm(forms.Form):
+    pass
+
+
+

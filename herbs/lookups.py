@@ -1,12 +1,19 @@
 from ajax_select import register, LookupChannel
 from .models import (Family, Genus, Species, Country, HerbItem,
-                    DetHistory, Additionals)
+                    DetHistory, Additionals, HerbAcronym)
 from .conf import settings, HerbsAppConf
 from django.db.models import Count
 from django.utils.encoding import force_text
 from django.utils.html import escape
 from django.core.urlresolvers import reverse
 import re
+
+
+def get_acronym(request):
+    query = HerbAcronym.objects.filter(
+        allowed_users__icontains=request.user.username)
+    if query.exists():
+        return query[0]
 
 
 NS = getattr(settings,
@@ -87,7 +94,12 @@ class CountryLookup(LookupChannel):
 class DifferentValuesMixin(LookupChannel):
     '''Abstract class'''
     def get_query(self, q, request):
-        kwargs = {'%s__icontains' % self.fieldname: q.lstrip()}
+        acronym  = get_acronym(request)
+        if acronym:
+            kwargs = {'%s__icontains' % self.fieldname: q.lstrip(),
+                      'acronym': acronym}
+        else:
+            kwargs = {'%s__icontains' % self.fieldname: q.lstrip()}
         return HerbItem.objects.filter(**kwargs).values(self.fieldname).annotate(Count(self.fieldname)).values_list(self.fieldname, flat=True)[:NS]
 
 @register('region')
