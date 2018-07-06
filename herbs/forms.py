@@ -34,6 +34,9 @@ tinymce_fieldset = {
     'width':'50%',
     'height':'400px',
     'theme_advanced_text_colors' : "000000,ff0000,0000ff",
+    'force_br_newlines': False,
+    'force_p_newlines': False,
+    'forced_root_block' : ''
 }
 
 # ------------------------------
