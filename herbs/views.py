@@ -1017,3 +1017,4 @@ def _smartify_species(item):
             'infra_rank': item.species.get_infra_rank_display(),
             'infra_epithet': item.species.infra_epithet,
             'infra_authorship': item.species.infra_authorship}
+

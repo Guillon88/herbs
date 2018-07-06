@@ -341,7 +341,25 @@ class ReplyForm(forms.Form):
 
 
 class BulkChangeForm(forms.Form):
-    pass
+    field = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
+                            required=False, label=_('Поле'))
+    old_value = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
+                                required=False, label=_('Старое значение'))
+    new_value = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
+                                required=False, label=_('Новое значение'))
+    captcha = forms.CharField(max_length=10, label=_('Название поля'),
+                              required=True,
+                              help_text=_('Повторите название изменяемого поля'))
+
+    def clean(self):
+        field_name = self.cleaned_data['field'].strip()
+        captcha = self.cleaned_data['field'].strip()
+        if captcha != field_name:
+            raise forms.ValidationError(
+                _("название изменяемого поля и введеное название не совпадают"))
+        return self.cleaned_data
+
+
 
 
 
