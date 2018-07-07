@@ -52,12 +52,13 @@ class HerbsAppConf(AppConf):
                                   ('herbcounter__count', _(u'Число просмотров'))
                                   ]
 
-    SOURCE_IMAGE_PATHS = '/home/scidam/webapps/herbviewer/snapshots/'
-    SOURCE_IMAGE_FILE_LIST = 'http://herbstatic.botsad.ru/images.txt'
+    SOURCE_IMAGE_PATHS = None
+    SOURCE_IMAGE_FILE = '/home/scidam/tmp/herbimages.txt'
+    SOURCE_IMAGE_FILE_LIST = 'http://herbstatic.botsad.ru/herbimages.txt'
     SOURCE_IMAGE_FILE_LIST_TIMEOUT = 5
     SOURCE_IMAGE_THUMB = 'ts'
-    SOURCE_IMAGE_URL = 'http://botsad.ru/herbarium/view/snapshots'
-    SOURCE_IMAGE_VIEWER = 'http://botsad.ru/herbarium/view/'
+    SOURCE_IMAGE_URL = 'http://herbstatic.botsad.ru/snapshots'
+    SOURCE_IMAGE_VIEWER = 'http://herbstatic.botsad.ru/'
     SOURCE_IMAGE_URL_RELATIVE = 'snapshots'
     SOURCE_IMAGE_LIST_KEY = 'herbimages_key'
     SOURCE_IMAGE_LIST_KEY_TIMEOUT = 5

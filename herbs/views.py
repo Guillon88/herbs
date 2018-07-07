@@ -880,16 +880,23 @@ def get_pending_images(acronym=''):
 
 def is_exists(acronym, id):
     file_set1 = ','.join(get_pending_images(acronym))
-    if settings.HERBS_SOURCE_IMAGE_FILE_LIST:
+
+    if settings.HERBS_SOURCE_IMAGE_FILE: #local file
         try:
-            afile = urlopen(settings.HERBS_SOURCE_IMAGE_FILE_LIST,
-                            timeout=settings.HERBS_SOURCE_IMAGE_FILE_LIST_TIMEOUT)
-            file_set2 = ','.join(afile.readlines())
-        except:
+            with open(settings.HERBS_SOURCE_IMAGE_FILE, 'r') as afile:
+                file_set2 = ','.join(afile.readlines())
+        except (FileNotFoundError, IOError):
             file_set2 = ''
-    else:
-        file_set2 = ','.join({j for j in sum(
-            [c for a, b, c in os.walk(settings.HERBS_SOURCE_IMAGE_PATHS)], [])})
+
+    if not file_set2:
+        if settings.HERBS_SOURCE_IMAGE_FILE_LIST: # remote file
+            try:
+                afile = urlopen(settings.HERBS_SOURCE_IMAGE_FILE_LIST,
+                                timeout=settings.HERBS_SOURCE_IMAGE_FILE_LIST_TIMEOUT)
+                file_set2 = ','.join(afile.readlines())
+            except:
+                file_set2 = ''
+
     fileset = ','.join([file_set1, file_set2])
     return (acronym + id) in fileset
 
