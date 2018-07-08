@@ -133,6 +133,14 @@ class HerbItemForm(forms.ModelForm):
         data = self.cleaned_data['identifiedby']
         return data.strip()
 
+    def clean_region(self):
+        data = self.cleaned_data['region']
+        return data.strip()
+
+    def clean_district(self):
+        data = self.cleaned_data['district']
+        return data.strip()
+
     def clean(self):
         '''Checking consistency for dates '''
         formdata = self.cleaned_data
