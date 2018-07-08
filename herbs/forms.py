@@ -17,6 +17,7 @@ try:
 except ImportError:
     ReCaptchaField = None
 
+from six import add_metaclass
 
 # ---------- tinymce integration
 
@@ -41,14 +42,29 @@ tinymce_fieldset = {
 
 # ------------------------------
 
-
-
 CS = getattr(settings,
              '%s_CH_SIZE' % HerbsAppConf.Meta.prefix.upper(), 80)
 
 
 taxon_name_pat = re.compile(r'[a-z]+')
 itemcode_pat = re.compile(r'^\d+$')
+
+
+def remove_spaces(*args):
+
+    def wrapped(name):
+        def _clean_spaces(self, _name=name):
+            data = self.cleaned_data[_name]
+            return data.strip()
+        return _clean_spaces
+
+    class StripSpaces(type):
+        def __new__(cls, name, bases, attrs):
+            for arg in args:
+                attrs['clean_' + arg ] = wrapped(arg)
+            return super(StripSpaces, cls).__new__(cls, name, bases, attrs)
+    return StripSpaces
+
 
 
 class TaxonCleanerMixin(forms.ModelForm):
@@ -71,7 +87,7 @@ class HerbItemFormSimple(forms.ModelForm):
     class Meta:
         model = HerbItem
 
-
+@add_metaclass(remove_spaces('collectedby', 'identifiedby', 'region', 'district'))
 class HerbItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
@@ -124,22 +140,6 @@ class HerbItemForm(forms.ModelForm):
         data = self.cleaned_data['collected_e']
         self._verify_dates(data)
         return data
-
-    def clean_collectedby(self):
-        data = self.cleaned_data['collectedby']
-        return data.strip()
-
-    def clean_identifiedby(self):
-        data = self.cleaned_data['identifiedby']
-        return data.strip()
-
-    def clean_region(self):
-        data = self.cleaned_data['region']
-        return data.strip()
-
-    def clean_district(self):
-        data = self.cleaned_data['district']
-        return data.strip()
 
     def clean(self):
         '''Checking consistency for dates '''
@@ -200,6 +200,7 @@ class HerbItemForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False, help_text=None, label=_("Определили"), attrs={'size': CS})
 
 
+@add_metaclass(remove_spaces('identifiedby'))
 class DetHistoryForm(forms.ModelForm):
     class Meta:
         model = DetHistory
@@ -207,13 +208,9 @@ class DetHistoryForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False,
                                      label=_("Переопределелил(и)"),
                                      attrs={'size': CS})
-    def clean_identifiedby(self):
-        data = self.cleaned_data['identifiedby']
-        return data.strip()
 
 
-
-
+@add_metaclass(remove_spaces('identifiedby'))
 class AdditionalsForm(forms.ModelForm):
     class Meta:
         model = Additionals
@@ -221,10 +218,6 @@ class AdditionalsForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False,
                                      label=_("Определелил(и)"),
                                      attrs={'size': CS})
-
-    def clean_identifiedby(self):
-        data = self.cleaned_data['identifiedby']
-        return data.strip()
 
 
 class RectSelectorForm(forms.Form):
