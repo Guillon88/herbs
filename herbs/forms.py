@@ -17,7 +17,7 @@ try:
 except ImportError:
     ReCaptchaField = None
 
-from six import add_metaclass
+from six import with_metaclass
 
 # ---------- tinymce integration
 
@@ -87,8 +87,12 @@ class HerbItemFormSimple(forms.ModelForm):
     class Meta:
         model = HerbItem
 
-@add_metaclass(remove_spaces('collectedby', 'identifiedby', 'region', 'district'))
-class HerbItemForm(forms.ModelForm):
+
+class HerbItemForm(with_metaclass(remove_spaces('collectedby',
+                                                'identifiedby',
+                                                'region',
+                                                'district'),
+                                  forms.ModelForm)):
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
@@ -200,8 +204,7 @@ class HerbItemForm(forms.ModelForm):
     identifiedby = AutoCompleteField('identifiedby', required=False, help_text=None, label=_("Определили"), attrs={'size': CS})
 
 
-@add_metaclass(remove_spaces('identifiedby'))
-class DetHistoryForm(forms.ModelForm):
+class DetHistoryForm(with_metaclass(remove_spaces('identifiedby'),forms.ModelForm)):
     class Meta:
         model = DetHistory
     species = AutoCompleteSelectField('species', required=False, label=_("Вид"))
@@ -210,8 +213,7 @@ class DetHistoryForm(forms.ModelForm):
                                      attrs={'size': CS})
 
 
-@add_metaclass(remove_spaces('identifiedby'))
-class AdditionalsForm(forms.ModelForm):
+class AdditionalsForm(with_metaclass(remove_spaces('identifiedby'),forms.ModelForm)):
     class Meta:
         model = Additionals
     species = AutoCompleteSelectField('species', required=True, label=_("Вид"))
