@@ -812,7 +812,6 @@ class PDF_BRYOPHYTE(BARCODE):
     def __init__(self):
         super(PDF_BRYOPHYTE, self).__init__(orientation='P')
 
-
     def _change_font_size(self):
         self._nfs = self._sfs * BRYOPHYTE_NOTE_FSIZE / float(SMALL_FONT_SIZE)
         self._nnfs = self._sfs * BRYOPHYTE_NOTENUM_FSIZE / float(
@@ -890,7 +889,11 @@ class PDF_BRYOPHYTE(BARCODE):
 
                 # Smart confertum and affinis printing...
                 sp_decomposed = list(map(lambda x: x.strip(), sp.split()))
-                if sp_decomposed[1] in list(map(lambda x: x[0], SIGNIFICANCE)):
+                if len(sp_decomposed) == 1:
+                    self.pdf.set_font('DejaVubi', '', self._sfs)
+                    spw = self.pdf.get_string_width(sp)
+                    self.pdf.cell(0, 0, sp)
+                elif sp_decomposed[1] in list(map(lambda x: x[0], SIGNIFICANCE)):
                     try:
                         sp_genus, sp_sign, sp_epithet = sp_decomposed[:3]
                     except ValueError:
