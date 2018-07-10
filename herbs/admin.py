@@ -569,7 +569,6 @@ class NotificationAdmin(admin.ModelAdmin):
     readonly_fields = ('username', 'emails', 'tracked_field', 'field_value')
     list_filter = ('status', 'username')
     search_fields = ('username', 'tracked_field', 'field_value')
-    filter_horizontal = ('created', )
 
     def edit_link(self, obj):
         resurl = '--'
