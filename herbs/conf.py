@@ -53,7 +53,7 @@ class HerbsAppConf(AppConf):
                                   ]
 
     SOURCE_IMAGE_PATHS = None
-    SOURCE_IMAGE_FILE = '/home/scidam/tmp/herbimages.txt'
+    SOURCE_IMAGE_FILE = '/home/scidam/tmp/herbsnapshots/herbimages.txt'
     SOURCE_IMAGE_FILE_LIST = 'http://herbstatic.botsad.ru/herbimages.txt'
     SOURCE_IMAGE_FILE_LIST_TIMEOUT = 5
     SOURCE_IMAGE_THUMB = 'ts'
