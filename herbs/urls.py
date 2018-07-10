@@ -5,7 +5,7 @@ from django.conf.urls import *
 try:
     from bgi.herbs.views import (get_item_data, advice_select, show_herbs,
                                  make_label, show_herbitem, json_api,
-                                 make_barcodes, make_bryopyte_label,
+                                 make_barcodes, make_bryophyte_label,
                                  upload_image, validate_image
                                  )
     from bgi.herbs import init_herbs
@@ -13,7 +13,7 @@ try:
 except ImportError:
     from .views import (get_item_data, advice_select, show_herbs,
                         make_label, show_herbitem, json_api,
-                        make_barcodes, make_bryopyte_label,
+                        make_barcodes, make_bryophyte_label,
                         upload_image, validate_image
                         )
     from . import init_herbs
@@ -26,7 +26,7 @@ urlpatterns = patterns('',
    url(r'^as/', advice_select),
    url(r'^sh/', show_herbs),
    url(r'^pdf/([,\d]{1,1500})', make_label, name='herbiteminfo'),
-   url(r'^envpdf/([,\d]{1,1500})', make_bryopyte_label, name='herbitembryo'),
+   url(r'^envpdf/([,\d]{1,1500})', make_bryophyte_label, name='herbitembryo'),
    url(r'^bars/([,\d]{1,1500})', make_barcodes, name='herbitembarcodes'),
    url(r'^[a-zA-Z]*(\d{1,15})', show_herbitem),
    url(r'^json/', json_api),

@@ -715,7 +715,8 @@ def collect_label_data(q):
                     'dethistory':  _dethistory,
                     'type_status': item.get_type_status_display(),
                     'logo_path': os.path.join(getattr(main_settings,
-                                                      'MEDIA_ROOT', ''),
+                                                      'MEDIA_ROOT',
+                                                      ''),
                                               str(item.acronym.logo)) if item.acronym else ''
                       })
         result.append(ddict)
@@ -753,7 +754,7 @@ def make_label(request, q):
 
 @login_required
 @never_cache
-def make_bryopyte_label(request, q):
+def make_bryophyte_label(request, q):
     '''Return pdf-doc or error page otherwise'''
 
     if len(q) > 1000:
