@@ -4,6 +4,7 @@ import re
 from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteField)
 from django import forms
+from django.forms.models import ModelFormMetaclass
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from datetime import timedelta, date
@@ -51,20 +52,18 @@ itemcode_pat = re.compile(r'^\d+$')
 
 
 def remove_spaces(*args):
-
     def wrapped(name):
         def _clean_spaces(self, _name=name):
             data = self.cleaned_data[_name]
             return data.strip()
         return _clean_spaces
 
-    class StripSpaces(type):
+    class StripSpaces(ModelFormMetaclass):
         def __new__(cls, name, bases, attrs):
             for arg in args:
                 attrs['clean_' + arg ] = wrapped(arg)
             return super(StripSpaces, cls).__new__(cls, name, bases, attrs)
     return StripSpaces
-
 
 
 class TaxonCleanerMixin(forms.ModelForm):
