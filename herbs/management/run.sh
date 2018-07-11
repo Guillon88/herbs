@@ -26,6 +26,7 @@ sudo mount -t cifs "//192.168.1.11/exchange/Herbarium_" $homedir/source/local -o
 echo "Mounting remote source directory"
 sshfs scidam@myremote:/home/scidam/tmp/herbsnapshots $homedir/source/remote
 
+rm $homedir/herbimages.txt
 wget -P $homedir  herbstatic.botsad.ru/herbimages.txt
 cp $homedir/herbimages.txt $homedir/source/remote/herbimages.txt
 
