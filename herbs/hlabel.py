@@ -922,9 +922,8 @@ class PDF_BRYOPHYTE(BARCODE):
                 # --------- End of smart conf. and aff. printing...
 
                 if ir:
-                    self.pdf.set_font('DejaVub', '', self._sfs)
-                    irw = self.pdf.get_string_width(ir)
                     self.pdf.set_font('DejaVu', '', self._sfs)
+                    irw = self.pdf.get_string_width(ir)
                     iauthw = self.pdf.get_string_width(iauth)
                     self.pdf.set_font('DejaVubi', '', self._sfs)
                     iepw = self.pdf.get_string_width(iep)
@@ -935,17 +934,13 @@ class PDF_BRYOPHYTE(BARCODE):
                                         self.goto(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.cell(0, 0, auth)
-
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spaw + 2,
                                         self.goto(self._ln))
-                        self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
-
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spaw + irw + 4,
                                         self.goto(self._ln))
                         self.pdf.cell(0, 0, iep)
-
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spaw + irw + iepw + 6,
                                         self.goto(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
@@ -959,14 +954,11 @@ class PDF_BRYOPHYTE(BARCODE):
                         self._ln += 1
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
                                         self.goto(self._ln))
-                        self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
-
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + irw + 2,
                                         self.goto(self._ln))
                         self.pdf.cell(0, 0, iep)
-
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + irw + iepw + 4,
                                         self.goto(self._ln))
@@ -978,10 +970,8 @@ class PDF_BRYOPHYTE(BARCODE):
                                         self.goto(self._ln))
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.cell(0, 0, auth)
-
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + spaw + 4,
                                         self.goto(self._ln))
-                        self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
 
                         self._ln += 1
@@ -1005,7 +995,6 @@ class PDF_BRYOPHYTE(BARCODE):
 
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + spaw + 4,
                                         self.goto(self._ln))
-                        self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
 
                         self.pdf.set_font('DejaVubi', '', self._sfs)
@@ -1029,15 +1018,12 @@ class PDF_BRYOPHYTE(BARCODE):
 
                         self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN + spw + spaw + 4,
                                         self.goto(self._ln))
-                        self.pdf.set_font('DejaVub', '', self._sfs)
                         self.pdf.cell(0, 0, ir)
-
                         self.pdf.set_font('DejaVubi', '', self._sfs)
                         self.pdf.set_xy(
                             BRYOPHYTE_LEFT_MARGIN + spw + spaw + 6 + irw,
                             self.goto(self._ln))
                         self.pdf.cell(0, 0, iep)
-
                         self.pdf.set_font('DejaVu', '', self._sfs)
                         self.pdf.set_xy(
                             BRYOPHYTE_LEFT_MARGIN + spw + spaw + 8 + irw + iepw,
