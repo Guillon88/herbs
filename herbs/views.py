@@ -8,7 +8,8 @@ from django.utils.translation import ugettext as _
 from .models import (Family, Genus, HerbItem, Country,
                      DetHistory, Species, SpeciesSynonym, Additionals,
                      HerbCounter, Subdivision, HerbAcronym, HerbReply)
-from .forms import SearchForm, RectSelectorForm, SendImage, ReplyForm
+from .forms import (SearchForm, RectSelectorForm, SendImage, ReplyForm,
+                    BulkChangeForm)
 from .conf import settings
 from .utils import _smartify_altitude, _smartify_dates, herb_as_dict, translit
 from streamingjson import JSONEncoder as JSONStreamer
@@ -937,6 +938,45 @@ def validate_image(request, filename=None):
         return HttpResponse(json.dumps({'error': error}),
                             content_type="application/json;charset=utf-8")
     return error
+
+@permission_required('herbs.can_set_publish') # new permission required!
+@never_cache
+@csrf_exempt
+def apply_bulk_changes(request):
+    form = BulkChangeForm(request)
+    if not form.is_bound:
+        return HttpResponse() # Show simple changing window based on django_admin base template
+    else:
+        if form.is_valid():
+            try:
+                hobj = HerbItem.objects.get(pk=form.cleaned_data['template'])
+            except HerbItem.DoesNotExist:
+                pass
+            if hobj:
+                field = form.cleaned_data['field']
+                old_value = form.cleaned_data['old_value']
+                new_value = form.cleaned_data['new_value']
+                if not hasattr(hobj, field):
+                    # It is very bad: no such attribute found error!
+                else:
+                    fobj = getattr(HerbItem._meta.fields, field, None)
+                    if fobj:
+                        if getattr(fobj, 'max_length', 0):
+                            if len(new_value) > getattr(fobj, 'max_length', 0):
+                                # Error and return
+                                pass
+                            else:
+                                if not hobj.acronym:
+                                    # Raise error and return;
+                                if hobj.subdivision:
+                                    num = HerbItem.objects.filter(acronym=hobj.acronym,
+                                                               subdivision=hobj.subdivision).update(**{field:new_value})
+                    else:
+                        pass
+                        #error and return
+        else:
+            # just show errors
+            pass
 
 
 @permission_required('herbs.can_set_publish')
