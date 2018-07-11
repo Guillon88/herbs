@@ -4,7 +4,7 @@ from .models import (Family, Genus, Species, Country, HerbItem,
 from .conf import settings, HerbsAppConf
 from django.db.models import Count
 from django.utils.encoding import force_text
-from django.utils.html import escape
+from django.utils.html import escape, mark_safe
 from django.core.urlresolvers import reverse
 import re
 
@@ -92,7 +92,6 @@ class CountryLookup(LookupChannel):
 
 
 class DifferentValuesMixin(LookupChannel):
-    '''Abstract class'''
     def get_query(self, q, request):
         acronym  = get_acronym(request)
         if acronym:
@@ -101,6 +100,14 @@ class DifferentValuesMixin(LookupChannel):
         else:
             kwargs = {'%s__icontains' % self.fieldname: q.lstrip()}
         return HerbItem.objects.filter(**kwargs).values(self.fieldname).annotate(Count(self.fieldname)).values_list(self.fieldname, flat=True)[:NS]
+
+    def format_item_display(self, obj):
+        return mark_safe('&'.join(map(escape, force_text(obj).split('&'))))
+
+    get_result = format_item_display
+    format_match = format_item_display
+
+
 
 @register('region')
 class RegionLookup(DifferentValuesMixin):
