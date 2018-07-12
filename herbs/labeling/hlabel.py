@@ -939,10 +939,10 @@ class PDF_BRYOPHYTE(BARCODE):
                             histline = translit(hist_item['identifiedby'], 'ru', reversed=True) + ': '
                             if hist_item['identified']:
                                 histline += '(' + hist_item['identified'] + ') '
-                            histline += hist_item['species']['species'] + \
+                            histline += ('<i>{}</i>'.format(hist_item['species']['species']) if hist_item['species']['species'] else '') + \
                             (' ' + hist_item['species']['spauth'] if hist_item['species']['spauth'] else '') + \
                             (' ' + hist_item['species']['infra_rank'] if hist_item['species']['infra_rank'] else '') +\
-                            (' ' + hist_item['species']['infra_epithet'] if hist_item['species']['infra_epithet'] else '') +\
+                            (' ' + '<i>{}</i>'.format(hist_item['species']['infra_epithet']) if hist_item['species']['infra_epithet'] else '') +\
                             ' ' + hist_item['species']['infra_authorship']
                             histlines.append(histline)
                         _note +=  'ID history: ' + '; '.join(histlines)
