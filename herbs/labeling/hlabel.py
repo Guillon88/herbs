@@ -14,8 +14,11 @@ if __name__ == '__main__':
                     )
     settings = None # mocking for testing ...
 else:
-    from herbs.utils import translit, smartify_language, SIGNIFICANCE
     from django.conf import settings
+    try:
+        from bgi.herbs.utils import translit, smartify_language, SIGNIFICANCE
+    except ImportError:
+        from herbs.utils import translit, smartify_language, SIGNIFICANCE
 
 
 # ------------ PDF font autoselect: japanese, korean fonts support
@@ -128,7 +131,7 @@ class PDF_MIXIN(object):
             lines = [[]]
             cline_width = 0
             for item in parser.parsed:
-                _splitted = item[0].split()
+                _splitted = item[0].split() or ([' '] if item[0][:1] == ' ' else [])
                 space_flag = '' + ('post' if item[0][-1] == ' ' else '') + \
                              ('pre' if item[0][0] == ' ' else '')
                 for ind, word in enumerate(_splitted):
@@ -155,7 +158,6 @@ class PDF_MIXIN(object):
                     lines[-1].append((word_to_print,
                                       self.pdf.get_string_width(word_to_print.strip()),
                                       self.choose_font(item[-1])))
-
             if font_size < 2:
                 done = True
             if line_number > line_nums and force:
@@ -1009,9 +1011,10 @@ class PDF_BRYOPHYTE(BARCODE):
                               first_indent=0,
                               right_position=BRYOPHYTE_LEFT_MARGIN + label_width,
                               font_size=self._sfs)
+
+            # TODO: Comments should be removed !
             # self.pdf.multi_cell(label_width -
             #                     BRYOPHYTE_MARGIN_EXTRA, self._lh, pos_info)
-
             if note.strip():
                 if note.strip()[-1] == '.':
                     _aux = ' '
@@ -1031,6 +1034,7 @@ class PDF_BRYOPHYTE(BARCODE):
                               right_position=BRYOPHYTE_LEFT_MARGIN + label_width,
                               font_size=self._sfs)
 
+            # TODO: Comments should be removed!
             # self.pdf.multi_cell(label_width -
             #                     BRYOPHYTE_MARGIN_EXTRA, self._lh, main_info)
 
@@ -1047,8 +1051,6 @@ class PDF_BRYOPHYTE(BARCODE):
                         barcode_width))
                 self.pdf.multi_cell(label_width, self._lh,
                                 leg_info)
-
-
 
             self.pdf.set_x(BRYOPHYTE_LEFT_MARGIN)
             if det_info:
@@ -1076,8 +1078,14 @@ class PDF_BRYOPHYTE(BARCODE):
                         self.check_resize_required(
                             self.pdf.get_string_width(_note),
                             barcode_width))
-                    self.pdf.multi_cell(label_width - 4,
-                                        self._lh * 0.6, _note)
+                    self.smarty_print(_note, self._lh * 0.6,
+                                      left_position=BRYOPHYTE_LEFT_MARGIN + 5,
+                                      first_indent=0,
+                                      right_position=BRYOPHYTE_LEFT_MARGIN + label_width - 4,
+                                      font_size=self._nfs)
+                    # TODO: Comments should be removed;
+                    # self.pdf.multi_cell(label_width - 4,
+                    #                     self._lh * 0.6, _note)
                     _y = self.pdf.get_y()
                     _y += 3
 
@@ -1102,7 +1110,7 @@ class PDF_BRYOPHYTE(BARCODE):
 if __name__ == '__main__':
     def test_bryophyte():
         test_pars = {'allspecies': [('Genus specimen%s'%x, 'auth%s'%x, 'subsp%s'%x,
-                                     'long_subspecies_name%s'%x, 'iauthorhip%s'%x, '')
+                                     'long_subspecies_name%s'%x, 'iauthorhip%s'%x, '<i>Note</i> what about <b>sdf</b> '*7)
                          for x in map(str, range(3))],
                      'coldate': '20 Jul 2000',
                      'latitude': '12.1232',
@@ -1118,7 +1126,7 @@ if __name__ == '__main__':
                      'fieldid': 'fox-3',
                      'acronym': 'VBGI',
                      'institute': 'Botanical Garden Institute',
-                     'note': 'Th<ig>is</ig> spe<b>ciem</b>en never <i>been</i> collected, be アプリ明朝 '*2,
+                     'note': 'Th<ig>is</ig> spe<b>ciem</b>en <i>never</i> <i>been</i> collected, be アプリ明朝 '*2,
                      'detdate': '13 Feb 2018 - 13 Feb 2018 -13 Feb 2018',
                      'district': 'Dirty place behind in the yard',
                      'gpsbased': 'True',
