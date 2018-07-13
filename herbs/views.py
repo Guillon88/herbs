@@ -942,45 +942,48 @@ def validate_image(request, filename=None):
                             content_type="application/json;charset=utf-8")
     return error
 
-#
-# @permission_required('herbs.can_set_publish') # new permission required!
-# @never_cache
-# @csrf_exempt
-# def apply_bulk_changes(request):
-#     form = BulkChangeForm(request)
-#     if not form.is_bound:
-#         return HttpResponse() # Show simple changing window based on django_admin base template
-#     else:
-#         if form.is_valid():
-#             try:
-#                 hobj = HerbItem.objects.get(pk=form.cleaned_data['template'])
-#             except HerbItem.DoesNotExist:
-#                 pass
-#             if hobj:
-#                 field = form.cleaned_data['field']
-#                 old_value = form.cleaned_data['old_value']
-#                 new_value = form.cleaned_data['new_value']
-#                 if not hasattr(hobj, field):
-#                     # It is very bad: no such attribute found error!
-#                 else:
-#                     fobj = getattr(HerbItem._meta.fields, field, None)
-#                     if fobj:
-#                         if getattr(fobj, 'max_length', 0):
-#                             if len(new_value) > getattr(fobj, 'max_length', 0):
-#                                 # Error and return
-#                                 pass
-#                             else:
-#                                 if not hobj.acronym:
-#                                     # Raise error and return;
-#                                 if hobj.subdivision:
-#                                     num = HerbItem.objects.filter(acronym=hobj.acronym,
-#                                                                subdivision=hobj.subdivision).update(**{field:new_value})
-#                     else:
-#                         pass
-#                         #error and return
-#         else:
-#             # just show errors
-#             pass
+
+@permission_required('herbs.can_set_publish') # new permission set required!
+@never_cache
+@csrf_exempt
+def suggest_bulk_changes(request):
+    form = BulkChangeForm(request)
+    context = {'errors': [], 'messages': []}
+    if not form.is_bound:
+        return HttpResponse() # Show simple changing window based on django_admin base template
+    else:
+        if form.is_valid():
+            # get user's acronym
+            if request.user.is_superuser:
+                allowed_acronyms = HerbAcronym.objects.all()
+                allowed_subdivisions = Subdivision.objects.all()
+            elif request.user.has_perm('herbs.can_apply_bulk_changes'):
+                allowed_acronyms = HerbAcronym.objects.filter(
+                                   allowed_users__icontains=request.user.username)
+                allowed_subdivisions = Subdivision.objects.filter(allowed_users__icontains=request.user.username)
+            else:
+                allowed_acronyms = []
+                allowed_subdivisions = []
+
+            if allowed_acronyms or allowed_subdivisions:
+                # Estimate the number of affected elements;
+                query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
+                try:
+                    query = query.filter({form.cleaned_data['field']: form.cleaned_data['old_value']})
+                except:
+                    pass
+                if query.exists():
+                    context['messages'].append(_('Внимание! Будут изменены {} записей в базе данных.'.format(query.count())))
+                else:
+                    context['errors'].apend(_('Ни одина запись базы данных не будет изменена'))
+            else:
+                pass # raise error no enough permissions to apply any changes
+
+        else:
+            context['errors'].append(_('Неправильно заполнена форма. Проверьте правила зполнения формы и повторите попытку еще раз.'))
+
+    # Prepare json return ;
+    return
 
 
 @permission_required('herbs.can_set_publish')
