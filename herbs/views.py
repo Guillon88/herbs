@@ -948,42 +948,84 @@ def validate_image(request, filename=None):
 @csrf_exempt
 def suggest_bulk_changes(request):
     form = BulkChangeForm(request)
-    context = {'errors': [], 'messages': []}
-    if not form.is_bound:
-        return HttpResponse() # Show simple changing window based on django_admin base template
+    context = {'errors': [], 'messages': [], 'form': form, 'clarify': False}
+    acronyms = request.POST.get('acronyms', '')
+    subdivisions = request.POST.get('subdivisions', '')
+    if request.user.is_superuser:
+        allowed_acronyms = HerbAcronym.objects.all()
+        allowed_subdivisions = Subdivision.objects.all()
+    elif request.user.has_perm('herbs.can_apply_bulk_changes'):
+        allowed_acronyms = HerbAcronym.objects.filter(
+            allowed_users__icontains=request.user.username)
+        allowed_subdivisions = Subdivision.objects.filter(
+            allowed_users__icontains=request.user.username)
     else:
-        if form.is_valid():
-            # get user's acronym
-            if request.user.is_superuser:
-                allowed_acronyms = HerbAcronym.objects.all()
-                allowed_subdivisions = Subdivision.objects.all()
-            elif request.user.has_perm('herbs.can_apply_bulk_changes'):
-                allowed_acronyms = HerbAcronym.objects.filter(
-                                   allowed_users__icontains=request.user.username)
-                allowed_subdivisions = Subdivision.objects.filter(allowed_users__icontains=request.user.username)
+        allowed_acronyms = []
+        allowed_subdivisions = []
+    if form.is_valid() and not(acronyms or subdivisions):
+         if allowed_acronyms or allowed_subdivisions:
+            # Estimate the number of affected elements;
+            query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
+            try:
+                query = query.filter({form.cleaned_data['field']: form.cleaned_data['old_value']})
+            except:
+                context['errors'].append(_('Неправильное имя изменяемого поля.'
+                                           'Такого поля нет в таблице гербарных записей,'
+                                           'или такое значение поля отсутствует в базе.'))
+            if query.exists():
+                # Check if changes is possible
+                fobj = getattr(HerbItem._meta.fields, form.cleaned_data['field'], None)
+                if hasattr(fobj, 'max_legnth'):
+                    allowed_length =  getattr(fobj, 'max_length', 0)
+                    if len(form.cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
+                        context['errors'].append(_('Новое значение поля '
+                                                   'его допустимую длину.'))
             else:
-                allowed_acronyms = []
-                allowed_subdivisions = []
+                context['errors'].append(_('Ни одина запись базы'
+                                          'данных не будет изменена'))
+         else:
+            context['errors'].append(_('Недостаточно прав для изменения '
+                                       'какого-либо подраздела гербария'))
+         if not context['errors']:
+             context['messages'].append(_('Предварительная проверка заявленных'
+                                         ' изменений прошла успешна.'
+                                         ' Выберите акроними и/или подразделы '
+                                         'гербария, к которым планируется применить '
+                                         'изменения.'))
+             context['clarify'] = True
 
-            if allowed_acronyms or allowed_subdivisions:
-                # Estimate the number of affected elements;
-                query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
-                try:
-                    query = query.filter({form.cleaned_data['field']: form.cleaned_data['old_value']})
-                except:
-                    pass
-                if query.exists():
-                    context['messages'].append(_('Внимание! Будут изменены {} записей в базе данных.'.format(query.count())))
-                else:
-                    context['errors'].apend(_('Ни одина запись базы данных не будет изменена'))
+    elif form.is_valid():
+        allowed_acronyms = [acronym.pk for acronym in allowed_acronyms]
+        allowed_subdivisions = [subdivision.pk for subdivision in allowed_subdivisions]
+        allowed_acronyms = set(allowed_acronyms).intersection(set(acronyms))
+        allowed_subdivisions = set(allowed_subdivisions).intersection(subdivisions)
+        if allowed_acronyms or allowed_subdivisions:
+            q_acronyms = [Q(acronym=ac) for ac in allowed_acronyms]
+            q_subdivisions = [Q(subdivision=s) for s in allowed_subdivisions]
+            if q_acronyms:
+                query = HerbItem.objects.filter(q_acronyms)
             else:
-                pass # raise error no enough permissions to apply any changes
-
+                query = HerbItem.objects.empty()
+            if q_subdivisions:
+                query = query.filter(q_subdivisions)
+            query = query.filter(**{form.cleaned_data['field']:form.cleaned_data['old_value']})
+            if request.is_ajax():
+                # estimate changes and return the form, as a XMLHTTPResponse
+                # TODO: Show the nubmer of herbitems to be changed!
+                pass
+            else:
+                pass
+                # do changes
         else:
-            context['errors'].append(_('Неправильно заполнена форма. Проверьте правила зполнения формы и повторите попытку еще раз.'))
+            context['error'].append(_('Не выбрано ни одного '
+                                      'акронима или подраздела гербария.'))
+    else:
+        context['errors'].append(_('Неправильно заполнена форма. '
+                                   'Проверьте правила зполнения формы '
+                                   'и повторите попытку еще раз.'))
 
-    # Prepare json return ;
-    return
+    return HttpResponse(result)
+
 
 
 @permission_required('herbs.can_set_publish')
