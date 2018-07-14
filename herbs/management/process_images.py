@@ -165,8 +165,8 @@ def easy_process():
             print('Appropriate tiff layer extracted...')
             temp_image_name = bname.split('.')[0]
             try:
-                imagestack.convert("RGB")
-                imagestack.save(os.path.join(TMP_FOLDER, temp_image_name + DEFAULT_TMP_FORMAT))
+                final_image = imagestack.convert("RGB")
+                final_image.save(os.path.join(TMP_FOLDER, temp_image_name + DEFAULT_TMP_FORMAT))
             except OSError:
                 print("An error occured when converting the image to RGB format")
                 continue
@@ -176,8 +176,8 @@ def easy_process():
             cmd_stack.append(os.path.join(TMP_FOLDER, temp_image_name + DEFAULT_TMP_FORMAT))
 
             # check if rotation needed
-            rotation = imagestack.width >= imagestack.height
-            imagestack.close()
+            rotation = final_image.width >= final_image.height
+            final_image.close()
             for subim in IMAGE_CONVERSION_OPTS:
                 destination_file = os.path.join(OUTPUT_IMAGE_PATH,
                                                 get_acronym_name(temp_image_name),
