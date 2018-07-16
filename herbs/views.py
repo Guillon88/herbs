@@ -948,9 +948,10 @@ def validate_image(request, filename=None):
 @csrf_exempt
 def suggest_bulk_changes(request):
     form = BulkChangeForm(request)
-    context = {'errors': [], 'messages': [], 'form': form, 'clarify': False}
+    context = {'errors': [], 'message': '', 'form': form, 'verified': False}
     acronyms = request.POST.get('acronyms', '')
     subdivisions = request.POST.get('subdivisions', '')
+    changed = None
     if request.user.is_superuser:
         allowed_acronyms = HerbAcronym.objects.all()
         allowed_subdivisions = Subdivision.objects.all()
@@ -978,7 +979,7 @@ def suggest_bulk_changes(request):
                 if hasattr(fobj, 'max_legnth'):
                     allowed_length =  getattr(fobj, 'max_length', 0)
                     if len(form.cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
-                        context['errors'].append(_('Новое значение поля '
+                        context['errors'].append(_('Новое значение поля превосходит'
                                                    'его допустимую длину.'))
             else:
                 context['errors'].append(_('Ни одина запись базы'
@@ -987,18 +988,17 @@ def suggest_bulk_changes(request):
             context['errors'].append(_('Недостаточно прав для изменения '
                                        'какого-либо подраздела гербария'))
          if not context['errors']:
-             context['messages'].append(_('Предварительная проверка заявленных'
-                                         ' изменений прошла успешна.'
-                                         ' Выберите акроними и/или подразделы '
-                                         'гербария, к которым планируется применить '
-                                         'изменения.'))
-             context['clarify'] = True
-
+             context['message'] =_('Предварительная проверка заявленных'
+                                    ' изменений прошла успешна.'
+                                    ' Выберите акроними и/или подразделы '
+                                    'гербария, к которым планируется применить '
+                                    'изменения.')
+             context['verified'] = True
     elif form.is_valid():
-        allowed_acronyms = [acronym.pk for acronym in allowed_acronyms]
-        allowed_subdivisions = [subdivision.pk for subdivision in allowed_subdivisions]
-        allowed_acronyms = set(allowed_acronyms).intersection(set(acronyms))
-        allowed_subdivisions = set(allowed_subdivisions).intersection(subdivisions)
+        allowed_acronyms = [acronym.pk for acronym in allowed_acronyms\
+                            if acronym.pk in acronyms]
+        allowed_subdivisions = [subdivision.pk for subdivision in allowed_subdivisions\
+                                if subdivision.pk in subdivisions]
         if allowed_acronyms or allowed_subdivisions:
             q_acronyms = [Q(acronym=ac) for ac in allowed_acronyms]
             q_subdivisions = [Q(subdivision=s) for s in allowed_subdivisions]
@@ -1011,10 +1011,10 @@ def suggest_bulk_changes(request):
             query = query.filter(**{form.cleaned_data['field']:form.cleaned_data['old_value']})
             if request.is_ajax():
                 # estimate changes and return the form, as a XMLHTTPResponse
-                # TODO: Show the nubmer of herbitems to be changed!
-                pass
+                return HttpResponse(json.dumps({'tochange': query.count()}),
+                            content_type="application/json;charset=utf-8")
             else:
-                pass
+                changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
                 # do changes
         else:
             context['error'].append(_('Не выбрано ни одного '
@@ -1023,9 +1023,10 @@ def suggest_bulk_changes(request):
         context['errors'].append(_('Неправильно заполнена форма. '
                                    'Проверьте правила зполнения формы '
                                    'и повторите попытку еще раз.'))
-
+    context.update({'changed': changed})
+    result = render_to_string('bulk_changes.html', context,
+                              context_instance=RequestContext(request))
     return HttpResponse(result)
-
 
 
 @permission_required('herbs.can_set_publish')
