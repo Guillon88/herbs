@@ -955,7 +955,8 @@ def bulk_changes(request):
         allowed_acronyms = HerbAcronym.objects.filter(
             allowed_users__icontains=request.user.username)
         allowed_subdivisions = Subdivision.objects.filter(
-            allowed_users__icontains=request.user.username) # TODO: children subdivisions!!!
+            allowed_users__icontains=request.user.username)
+            # TODO: children subdivisions!!!
     else:
         allowed_acronyms = []
         allowed_subdivisions = []

@@ -24,3 +24,9 @@ def force_translit(value):
         if isinstance(value, basestring):
             return  translit(value, 'ru', reversed=True)
     return value
+
+
+@register.filter
+def sanitize_tags(value):
+    return value
+    #TODO: remove all html tags from a string except some specific tags .
