@@ -393,6 +393,7 @@ class HerbItem(HerbItemMixin):
         permissions = (('can_set_publish', _('может публиковать и назначать код')),
                        ('can_see_additionals', _('видит дополнительные виды')),
                        ('can_set_code', _('может назначать гербарный код')),
+                       ('can_apply_bulk_changes', _('массовые изменения записей'))
                        )
 
     def get_absolute_url(self):
