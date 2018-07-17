@@ -15,11 +15,7 @@ if __name__ == '__main__':
     settings = None # mocking for testing ...
 else:
     from django.conf import settings
-    try:
-        from bgi.herbs.utils import translit, smartify_language, SIGNIFICANCE
-    except ImportError:
-        from herbs.utils import translit, smartify_language, SIGNIFICANCE
-
+    from ..utils import translit, smartify_language, SIGNIFICANCE
 
 # ------------ PDF font autoselect: japanese, korean fonts support
 class StyledPDF(fpdf.FPDF):
@@ -59,7 +55,7 @@ class StyledPDF(fpdf.FPDF):
                     {"from": ord(u"\u1100"), "to": ord(u"\u11ff")}, #Hangul Jamo
                     {"from": ord(u"\u3130"), "to": ord(u"\u318f")}, #Hangul Compatibility
                     {"from": ord(u"\ua960"), "to": ord(u"\ua97f")}, #Hangul Jamo Extended A
-                    {"from": ord(u"\ud7b0"), "to": ord(u"\ud7ff")}, # Hangul Jamo Extended B
+                    {"from": ord(u"\ud7b0"), "to": ord(u"\ud7ff")}, #Hangul Jamo Extended B
                 ]
                     }
 

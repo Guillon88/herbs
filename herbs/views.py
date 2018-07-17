@@ -29,11 +29,7 @@ from .models import (Family, Genus, HerbItem, Country,
                      DetHistory, Species, SpeciesSynonym, Additionals,
                      HerbCounter, Subdivision, HerbAcronym, HerbReply)
 from .utils import _smartify_altitude, _smartify_dates, herb_as_dict, translit
-
-try:
-    from bgi.herbs.labeling.hlabel import PDF_DOC, BARCODE, PDF_BRYOPHYTE
-except ImportError:
-    from herbs.labeling.hlabel import PDF_DOC, BARCODE, PDF_BRYOPHYTE
+from .labeling.hlabel import PDF_DOC, BARCODE, PDF_BRYOPHYTE
 
 try:
     from django.core.cache import cache
@@ -946,7 +942,7 @@ def validate_image(request, filename=None):
 @permission_required('herbs.can_set_publish') # new permission set required!
 @never_cache
 @csrf_exempt
-def suggest_bulk_changes(request):
+def bulk_changes(request):
     form = BulkChangeForm(request)
     context = {'errors': [], 'message': '', 'form': form, 'verified': False}
     acronyms = request.POST.get('acronyms', '')
@@ -959,7 +955,7 @@ def suggest_bulk_changes(request):
         allowed_acronyms = HerbAcronym.objects.filter(
             allowed_users__icontains=request.user.username)
         allowed_subdivisions = Subdivision.objects.filter(
-            allowed_users__icontains=request.user.username)
+            allowed_users__icontains=request.user.username) # TODO: children subdivisions!!!
     else:
         allowed_acronyms = []
         allowed_subdivisions = []
@@ -1014,8 +1010,9 @@ def suggest_bulk_changes(request):
                 return HttpResponse(json.dumps({'tochange': query.count()}),
                             content_type="application/json;charset=utf-8")
             else:
-                changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
+                # changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
                 # do changes
+                changed = query.count() # just mock changes, don't apply it.
         else:
             context['error'].append(_('Не выбрано ни одного '
                                       'акронима или подраздела гербария.'))

@@ -27,15 +27,12 @@
         <form action="">
          {{form}}
         {%if not verified%}
-
+            Fill the regular form... just fill it and send
+            <input type="submit" value="Запрос" title="Запросить изменения">
         {% else %}
-
-         Show additional fields here, may be in a loop;
-
-
-        <input type="submit" value="Исправить">
+            Show additional fields here, may be in a loop;
+            <input type="submit" value="Применить" title="Применить изменения">
         {%endif%}
-        <input type="submit" value="Применить" title="Применить изменения">
         </form>
 
         <!-- Error block-->
@@ -53,6 +50,14 @@
                 {{message}}
             </div>
         {%endif%}
+
+        <!-- Final message: all done! -->
+        {%if changed%}
+            <div id="herbitem-changed">
+            The number of changed items is {{changed}}.
+            </div>
+        {%endif%}
+
     </div>
 </div>
 {% endblock %}

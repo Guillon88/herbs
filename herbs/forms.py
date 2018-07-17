@@ -346,7 +346,6 @@ class ReplyForm(forms.Form):
 
 
 class BulkChangeForm(forms.Form):
-    template = forms.IntegerField(required=False, label=_('Шаблонный образец'))
     field = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
                             required=False, label=_('Поле'))
     old_value = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),

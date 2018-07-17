@@ -2,21 +2,12 @@
 
 from django.conf.urls import *
 
-try:
-    from bgi.herbs.views import (get_item_data, advice_select, show_herbs,
-                                 make_label, show_herbitem, json_api,
-                                 make_barcodes, make_bryophyte_label,
-                                 upload_image, validate_image
-                                 )
-    from bgi.herbs import init_herbs
-
-except ImportError:
-    from .views import (get_item_data, advice_select, show_herbs,
-                        make_label, show_herbitem, json_api,
-                        make_barcodes, make_bryophyte_label,
-                        upload_image, validate_image
-                        )
-    from . import init_herbs
+from .views import (get_item_data, advice_select, show_herbs,
+                    make_label, show_herbitem, json_api,
+                    make_barcodes, make_bryophyte_label,
+                    upload_image, validate_image, bulk_changes
+                    )
+from . import init_herbs
 
 
 init_herbs()
