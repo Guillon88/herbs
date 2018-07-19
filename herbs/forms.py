@@ -346,24 +346,24 @@ class ReplyForm(forms.Form):
 
 
 class BulkChangeForm(forms.Form):
-    field = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
-                            required=False, label=_('Поле'))
-    old_value = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
+    field = forms.CharField(widget=forms.TextInput(attrs={'readonly':'readonly'}),
+                            required=False, label=_('Поле'), max_length=50)
+    old_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Старое значение'))
-    new_value = forms.CharField(widget=forms.Textarea(attrs={'readonly':'readonly'}),
+    new_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Новое значение'))
-    captcha = forms.CharField(max_length=10, label=_('Название поля'),
-                              required=True,
-                              help_text=_('Повторите название изменяемого поля'))
+    captcha = forms.CharField(max_length=10, label=_('Название поля (повторить)'),
+                              required=True)
 
     def clean(self):
-        field_name = self.cleaned_data['field'].strip()
-        captcha = self.cleaned_data['captcha'].strip()
-        self.cleaned_data['new_value'] = self.cleaned_data['new_value'].strip()
+        cleaned_data = self.cleaned_data
+        cleaned_data['field'] = field_name = cleaned_data.get('field', '').strip()
+        cleaned_data['captcha'] = captcha = cleaned_data.get('captcha', '').strip()
+        cleaned_data['new_value'] = cleaned_data.get('new_value', '').strip()
         if captcha != field_name:
             raise forms.ValidationError(
                 _("название изменяемого поля и введеное название не совпадают"))
-        return self.cleaned_data
+        return cleaned_data
 
 
 

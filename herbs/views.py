@@ -943,10 +943,27 @@ def validate_image(request, filename=None):
 @never_cache
 @csrf_exempt
 def bulk_changes(request):
-    form = BulkChangeForm(request)
+    form = BulkChangeForm(request.GET)
     context = {'errors': [], 'message': '', 'form': form, 'verified': False}
-    acronyms = request.POST.get('acronyms', '')
-    subdivisions = request.POST.get('subdivisions', '')
+    acronyms = request.GET.getlist('acronym', [])
+
+    acc = list()
+    for ac in acronyms:
+        try:
+            acc.append(int(ac))
+        except ValueError:
+            pass
+    acronyms = acc
+
+    subdivisions = request.GET.getlist('subdivision', [])
+    subs = list()
+    for s in subdivisions:
+        try:
+            subs.append(int(s))
+        except ValueError:
+            pass
+    subdivisions = subs
+
     changed = None
     if request.user.is_superuser:
         allowed_acronyms = HerbAcronym.objects.all()
@@ -960,36 +977,38 @@ def bulk_changes(request):
     else:
         allowed_acronyms = []
         allowed_subdivisions = []
+    context['acronyms'] = allowed_acronyms
+    context['subdivisions'] = allowed_subdivisions
     if form.is_valid() and not(acronyms or subdivisions):
          if allowed_acronyms or allowed_subdivisions:
             # Estimate the number of affected elements;
             query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
             try:
-                query = query.filter({form.cleaned_data['field']: form.cleaned_data['old_value']})
+                query = query.filter(**{form.cleaned_data['field']: form.cleaned_data['old_value']})
             except:
-                context['errors'].append(_('Неправильное имя изменяемого поля.'
-                                           'Такого поля нет в таблице гербарных записей,'
-                                           'или такое значение поля отсутствует в базе.'))
+                context['errors'].append(_(u'Неправильное имя изменяемого поля.'
+                                           u'Такого поля нет в таблице гербарных записей,'
+                                           u'или такое значение поля отсутствует в базе.'))
             if query.exists():
                 # Check if changes is possible
                 fobj = getattr(HerbItem._meta.fields, form.cleaned_data['field'], None)
                 if hasattr(fobj, 'max_legnth'):
                     allowed_length =  getattr(fobj, 'max_length', 0)
                     if len(form.cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
-                        context['errors'].append(_('Новое значение поля превосходит'
-                                                   'его допустимую длину.'))
+                        context['errors'].append(_(u'Новое значение поля превосходит'
+                                                   u'его допустимую длину.'))
             else:
-                context['errors'].append(_('Ни одина запись базы'
-                                          'данных не будет изменена'))
+                context['errors'].append(_(u'Ни одина запись базы '
+                                           u'данных не будет изменена'))
          else:
-            context['errors'].append(_('Недостаточно прав для изменения '
-                                       'какого-либо подраздела гербария'))
+            context['errors'].append(_(u'Недостаточно прав для изменения '
+                                       u'какого-либо подраздела гербария'))
          if not context['errors']:
-             context['message'] =_('Предварительная проверка заявленных'
-                                    ' изменений прошла успешна.'
-                                    ' Выберите акроними и/или подразделы '
-                                    'гербария, к которым планируется применить '
-                                    'изменения.')
+             context['message'] =_(u'Предварительная проверка заявленных'
+                                   u' изменений прошла успешна.'
+                                   u' Выберите акроними и/или подразделы '
+                                   u'гербария, к которым планируется применить '
+                                   u'изменения.')
              context['verified'] = True
     elif form.is_valid():
         allowed_acronyms = [acronym.pk for acronym in allowed_acronyms\
@@ -1000,27 +1019,27 @@ def bulk_changes(request):
             q_acronyms = [Q(acronym=ac) for ac in allowed_acronyms]
             q_subdivisions = [Q(subdivision=s) for s in allowed_subdivisions]
             if q_acronyms:
-                query = HerbItem.objects.filter(q_acronyms)
+                query = HerbItem.objects.filter(reduce(operator.or_, q_acronyms))
             else:
                 query = HerbItem.objects.empty()
             if q_subdivisions:
-                query = query.filter(q_subdivisions)
-            query = query.filter(**{form.cleaned_data['field']:form.cleaned_data['old_value']})
+                query = query.filter(reduce(operator.or_, q_subdivisions))
+            query = query.filter(**{form.cleaned_data['field']: form.cleaned_data['old_value']})
             if request.is_ajax():
                 # estimate changes and return the form, as a XMLHTTPResponse
                 return HttpResponse(json.dumps({'tochange': query.count()}),
                             content_type="application/json;charset=utf-8")
             else:
-                # changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
-                # do changes
-                changed = query.count() # just mock changes, don't apply it.
+                # actually apply changes
+                changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
         else:
-            context['error'].append(_('Не выбрано ни одного '
-                                      'акронима или подраздела гербария.'))
+            context['errors'].append(_(u'Не выбрано ни одного '
+                                      u'акронима или подраздела гербария.'))
     else:
-        context['errors'].append(_('Неправильно заполнена форма. '
-                                   'Проверьте правила зполнения формы '
-                                   'и повторите попытку еще раз.'))
+        if not form.is_bound:
+            context['errors'].append(_(u'Неправильно заполнена форма. '
+                                       u'Проверьте правила зполнения формы '
+                                       u'и повторите попытку еще раз.'))
     context.update({'changed': changed})
     result = render_to_string('bulk_changes.html', context,
                               context_instance=RequestContext(request))
