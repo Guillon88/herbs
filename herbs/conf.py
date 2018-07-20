@@ -12,6 +12,11 @@ class HerbsAppConf(AppConf):
                             ('cf.', 'confertum')
                             )
 
+    # Bulk changes settings
+    ALLOWED_FOR_BULK_CHANGE = ('region', 'district', 'collectedby',
+                               'identifiedby', 'detailed')
+
+
     # Tracking changes feature
     TRACKED_FIELDS = ('collectedby', 'identifiedby', 'region', 'district', 'species')
     NOTIFICATION_MAILS = ('kislov@easydan.com', 'vabakalin@gmail.com',

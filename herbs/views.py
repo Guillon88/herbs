@@ -989,16 +989,7 @@ def bulk_changes(request):
                 context['errors'].append(_(u'Неправильное имя изменяемого поля.'
                                            u'Такого поля нет в таблице гербарных записей,'
                                            u'или такое значение поля отсутствует в базе.'))
-            if query.exists():
-                # TODO: Check max_length correctly: update needed!
-                # Check if changes is possible
-                fobj = getattr(HerbItem._meta.fields, form.cleaned_data['field'], None)
-                if hasattr(fobj, 'max_legnth'):
-                    allowed_length = getattr(fobj, 'max_length', 0)
-                    if len(form.cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
-                        context['errors'].append(_(u'Новое значение поля превосходит'
-                                                   u'его допустимую длину.'))
-            else:
+            if not query.exists():
                 context['errors'].append(_(u'Ни одина запись базы '
                                            u'данных не будет изменена'))
          else:
@@ -1031,7 +1022,7 @@ def bulk_changes(request):
                 return HttpResponse(json.dumps({'tochange': query.count()}),
                             content_type="application/json;charset=utf-8")
             else:
-                # actually apply changes
+                # actually apply changes, if no errors occurred
                 changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
         else:
             context['errors'].append(_(u'Не выбрано ни одного '

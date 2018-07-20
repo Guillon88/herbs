@@ -5,6 +5,7 @@ from ..utils import smartify_language, translit
 from ..models import Country
 from django.utils import translation
 from six import string_types
+from django.conf import settings
 
 register = template.Library()
 
@@ -25,6 +26,12 @@ def force_translit(value):
         if isinstance(value, string_types):
             return translit(value, 'ru', reversed=True)
     return value
+
+
+@register.filter
+def is_allowed_for_changing(name):
+    return name in getattr(settings, 'HERBS_ALLOWED_FOR_BULK_CHANGE', tuple())
+
 
 
 @register.filter

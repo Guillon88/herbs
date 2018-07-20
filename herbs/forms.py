@@ -352,7 +352,7 @@ class BulkChangeForm(forms.Form):
                                 required=False, label=_('Старое значение'))
     new_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Новое значение'))
-    captcha = forms.CharField(max_length=10, label=_('Название поля (повторить)'),
+    captcha = forms.CharField(max_length=50, label=_('Название поля (повторить)'),
                               required=True)
 
     def clean(self):
@@ -363,8 +363,13 @@ class BulkChangeForm(forms.Form):
         if captcha != field_name:
             raise forms.ValidationError(
                 _("название изменяемого поля и введеное название не совпадают"))
+        fobj = getattr(HerbItem._meta.fields, cleaned_data['field'],
+                       None)
+        allowed_length = getattr(fobj, 'max_length', 0)
+        if len(cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
+            raise forms.ValidationError(_(u'Новое значение поля превосходит'
+                                          u'его допустимую длину.'))
         return cleaned_data
-
 
 
 
