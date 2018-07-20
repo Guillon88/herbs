@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import timedelta, date
 from .models import (Family, Genus, HerbItem, Species,
                      DetHistory, HerbAcronym, Additionals)
+from django.db.models.fields import FieldDoesNotExist
 from django.forms.util import ErrorList
 from .conf import settings, HerbsAppConf
 
@@ -363,14 +364,13 @@ class BulkChangeForm(forms.Form):
         if captcha != field_name:
             raise forms.ValidationError(
                 _("название изменяемого поля и введеное название не совпадают"))
-        fobj = getattr(HerbItem._meta.fields, cleaned_data['field'],
-                       None)
+        try:
+             fobj = HerbItem._meta.get_field(cleaned_data['field'])
+        except FieldDoesNotExist:
+             return cleaned_data
         allowed_length = getattr(fobj, 'max_length', 0)
         if len(cleaned_data['new_value']) > allowed_length and allowed_length is not 0:
             raise forms.ValidationError(_(u'Новое значение поля превосходит'
-                                          u'его допустимую длину.'))
+                                          u' его допустимую длину.'
+                                          u' Допустимая длина составляет %s символов.' % allowed_length))
         return cleaned_data
-
-
-
-
