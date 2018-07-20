@@ -917,8 +917,9 @@ class PDF_BRYOPHYTE(BARCODE):
                     _note = _note.strip()
                     if len(identifiedby) > 1 and mainind > 1:
                         if _note and identifiedby[0] != identifiedby[mainind - 1]:
-                            if _note[-1] in [';', '.', ',']:
-                                _note = _note[:-1]
+                            # UPDATE: Temporary removed, revision needed...
+                            # if _note[-1] in [';', '.', ',']:
+                            #     _note = _note[:-1]
                             if identifiedby[mainind-1].strip():
                                 _note += '; '
                                 _note += 'det. ' + translit(identifiedby[mainind - 1], 'ru', reversed=True)
@@ -927,8 +928,9 @@ class PDF_BRYOPHYTE(BARCODE):
                                 _note += 'Det. ' + translit(identifiedby[mainind - 1], 'ru', reversed=True)
                     if dethistory and mainind == 1:
                         if _note:
-                            if _note[-1] in [';', '.', ',']:
-                                _note = _note[:-1]
+                            # UPDATE: Temporary removed, revision needed...
+                            #if _note[-1] in [';', '.', ',']:
+                            #    _note = _note[:-1]
                             _note += '; '
                         histlines = []
                         for hist_item in dethistory:
