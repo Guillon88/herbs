@@ -45,6 +45,7 @@ allowed_image_pat=re.compile(settings.HERBS_SOURCE_IMAGE_PATTERN)
 acronym_pat_ = re.compile(r'([A-Z]{1,10})(\d+)')
 digit_pat = re.compile(r'\d+')
 
+
 class EchoData(object):
     def write(self, value):
         return value
@@ -939,7 +940,7 @@ def validate_image(request, filename=None):
     return error
 
 
-@permission_required('herbs.can_set_publish') # new permission set required!
+@permission_required('herbs.can_set_publish')
 @never_cache
 @csrf_exempt
 def bulk_changes(request):
@@ -973,7 +974,7 @@ def bulk_changes(request):
             allowed_users__icontains=request.user.username)
         allowed_subdivisions = Subdivision.objects.filter(
             allowed_users__icontains=request.user.username)
-            # TODO: children subdivisions!!!
+            # FIXME: children subdivisions!!!
     else:
         allowed_acronyms = []
         allowed_subdivisions = []
@@ -984,10 +985,10 @@ def bulk_changes(request):
         search_operation = 'exact'
         if form.cleaned_data['as_subs']:
             search_operation  = 'contains'
-        search_operation = ('i' if form.cleaned_data['case_sens'] else '') + search_operation
+        search_operation = ('i' if form.cleaned_data['case_insens'] else '') + search_operation
 
     if form.is_valid() and not(acronyms or subdivisions):
-         if allowed_acronyms or allowed_subdivisions:
+        if allowed_acronyms or allowed_subdivisions:
             # Estimate the number of affected elements;
             query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
             try:
@@ -999,20 +1000,22 @@ def bulk_changes(request):
             except:
                 context['errors'].append(_(u'Неправильное имя изменяемого поля.'
                                            u'Такого поля нет в таблице гербарных записей,'
-                                           u'или такое значение поля отсутствует в базе.'))
+                                           u'или такое значение поля отсутствует в базе.')
+                                         )
             if not query.exists():
                 context['errors'].append(_(u'Ни одина запись базы '
                                            u'данных не будет изменена'))
-         else:
+        else:
             context['errors'].append(_(u'Недостаточно прав для изменения '
                                        u'какого-либо подраздела гербария'))
-         if not context['errors']:
-             context['message'] =_(u'Предварительная проверка заявленных'
+        if not context['errors']:
+            context['message'] =_(u'Предварительная проверка заявленных'
                                    u' изменений прошла успешна.'
                                    u' Выберите акроними и/или подразделы '
                                    u'гербария, к которым планируется применить '
                                    u'изменения.')
-             context['verified'] = True
+            context['verified'] = True
+
     elif form.is_valid():
         allowed_acronyms = [acronym.pk for acronym in allowed_acronyms\
                             if acronym.pk in acronyms]
@@ -1040,14 +1043,23 @@ def bulk_changes(request):
                 if not form.cleaned_data['as_subs']:
                     changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
                 else:
+                    # case insensitive replacement
+                    changed = 0
                     for item in query:
                         field_value = getattr(item, form.cleaned_data['field'],
                                               None)
                         if field_value is not None:
-                            _ = field_value.split(form.cleaned_data['old_value'])
-                            setattr(item, form.cleaned_data['field'],
-                                    form.cleaned_data['new_value'].join(_))
-                            # item.save()  TODO: uncomment when deploy...
+                            if form.cleaned_data['case_insens']:
+                                old_value_pattern = re.compile(re.escape(form.cleaned_data['old_value']),
+                                                           re.IGNORECASE)
+                            else:
+                                old_value_pattern = re.compile(
+                                    re.escape(form.cleaned_data['old_value']))
+                            tmp = old_value_pattern.sub(form.cleaned_data['new_value'],
+                                                        field_value)
+                            setattr(item, form.cleaned_data['field'], tmp)
+                            item.save()
+                            changed += 1
         else:
             context['errors'].append(_(u'Не выбрано ни одного '
                                       u'акронима или подраздела гербария.'))

@@ -352,7 +352,7 @@ class BulkChangeForm(forms.Form):
     old_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Текущее значение'))
     as_subs = forms.BooleanField(required=False, label=_('Искать как включение (подстроку)'))
-    case_sens = forms.BooleanField(required=False, label=_('Не учитывать регистр'))
+    case_insens = forms.BooleanField(required=False, label=_('Не учитывать регистр'))
     new_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Новое значение'))
     captcha = forms.CharField(max_length=50, label=_('Название поля (повторить)'),
@@ -375,9 +375,6 @@ class BulkChangeForm(forms.Form):
             raise forms.ValidationError(_(u'Новое значение поля превосходит'
                                           u' его допустимую длину.'
                                           u' Допустимая длина составляет %s символов.' % allowed_length))
-        if cleaned_data['as_subs'] and not cleaned_data['field']:
-            raise forms.ValidationError(_('При поиске подстроки искомое значение не может быть пустым.'))
-
         max_chars = getattr(settings,
                             '%s_MAX_BULK_CONTAIN_CHARS' % HerbsAppConf.Meta.prefix.upper(),
                             5)

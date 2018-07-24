@@ -14,7 +14,7 @@ class HerbsAppConf(AppConf):
 
     # Bulk changes settings
     ALLOWED_FOR_BULK_CHANGE = ('region', 'district', 'collectedby',
-                               'identifiedby', 'detailed')
+                               'identifiedby', 'detailed', 'note')
     MAX_BULK_CONTAIN_CHARS = 5
 
     # Tracking changes feature

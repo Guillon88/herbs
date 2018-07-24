@@ -113,8 +113,8 @@ font-size: 1.2em;}
             {%if acronyms%}
             <hr>
              <div id="herbitem-changed">
-                Гербарные записи с выбранными параметрами имеются.
-                Выберите акронимы и подразделы гербария,
+                Гербарные записи с выбранными параметрами найдены.
+                Выберите акронимы и/или подразделы гербария,
                 к которым вы хотите применить изменения.
             </div>
             <h2>Гербарные акронимы</h2>
@@ -169,7 +169,7 @@ font-size: 1.2em;}
         $(document).ready(function(){
           $("input[type=checkbox]").change(function(){
           var formdata = $("#herb-bulk-form").serialize();
-          $.get("", formdata, showPending)
+          $.get("{%url 'change_herbitems'%}", formdata, showPending)
            });
         });
         </script>
