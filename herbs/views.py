@@ -979,12 +979,23 @@ def bulk_changes(request):
         allowed_subdivisions = []
     context['acronyms'] = allowed_acronyms
     context['subdivisions'] = allowed_subdivisions
+
+    if form.is_valid():
+        search_operation = 'exact'
+        if form.cleaned_data['as_subs']:
+            search_operation  = 'contains'
+        search_operation = ('i' if form.cleaned_data['case_sens'] else '') + search_operation
+
     if form.is_valid() and not(acronyms or subdivisions):
          if allowed_acronyms or allowed_subdivisions:
             # Estimate the number of affected elements;
             query = HerbItem.objects.filter(Q(acronym__in=allowed_acronyms)|Q(subdivision__in=allowed_subdivisions))
             try:
-                query = query.filter(**{form.cleaned_data['field']: form.cleaned_data['old_value']})
+                query = query.filter(**{
+                    '%s__%s' % (form.cleaned_data['field'],
+                                search_operation):
+                                form.cleaned_data['old_value']
+                                        })
             except:
                 context['errors'].append(_(u'Неправильное имя изменяемого поля.'
                                            u'Такого поля нет в таблице гербарных записей,'
@@ -1016,14 +1027,27 @@ def bulk_changes(request):
                 query = HerbItem.objects.empty()
             if q_subdivisions:
                 query = query.filter(reduce(operator.or_, q_subdivisions))
-            query = query.filter(**{form.cleaned_data['field']: form.cleaned_data['old_value']})
+            query = query.filter(**{
+                '%s__%s' % (form.cleaned_data['field'], search_operation):
+                    form.cleaned_data['old_value']
+                                    })
             if request.is_ajax():
                 # estimate changes and return the form, as a XMLHTTPResponse
                 return HttpResponse(json.dumps({'tochange': query.count()}),
                             content_type="application/json;charset=utf-8")
             else:
                 # actually apply changes, if no errors occurred
-                changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
+                if not form.cleaned_data['as_subs']:
+                    changed = query.update(**{form.cleaned_data['field']: form.cleaned_data['new_value']})
+                else:
+                    for item in query:
+                        field_value = getattr(item, form.cleaned_data['field'],
+                                              None)
+                        if field_value is not None:
+                            _ = field_value.split(form.cleaned_data['old_value'])
+                            setattr(item, form.cleaned_data['field'],
+                                    form.cleaned_data['new_value'].join(_))
+                            # item.save()  TODO: uncomment when deploy...
         else:
             context['errors'].append(_(u'Не выбрано ни одного '
                                       u'акронима или подраздела гербария.'))

@@ -350,7 +350,9 @@ class BulkChangeForm(forms.Form):
     field = forms.CharField(widget=forms.TextInput(attrs={'readonly':'readonly'}),
                             required=False, label=_('Поле'), max_length=50)
     old_value = forms.CharField(widget=forms.Textarea(),
-                                required=False, label=_('Старое значение'))
+                                required=False, label=_('Текущее значение'))
+    as_subs = forms.BooleanField(required=False, label=_('Искать как включение (подстроку)'))
+    case_sens = forms.BooleanField(required=False, label=_('Не учитывать регистр'))
     new_value = forms.CharField(widget=forms.Textarea(),
                                 required=False, label=_('Новое значение'))
     captcha = forms.CharField(max_length=50, label=_('Название поля (повторить)'),
@@ -373,4 +375,23 @@ class BulkChangeForm(forms.Form):
             raise forms.ValidationError(_(u'Новое значение поля превосходит'
                                           u' его допустимую длину.'
                                           u' Допустимая длина составляет %s символов.' % allowed_length))
+        if cleaned_data['as_subs'] and not cleaned_data['field']:
+            raise forms.ValidationError(_('При поиске подстроки искомое значение не может быть пустым.'))
+
+        max_chars = getattr(settings,
+                            '%s_MAX_BULK_CONTAIN_CHARS' % HerbsAppConf.Meta.prefix.upper(),
+                            5)
+        if cleaned_data['as_subs'] and len(cleaned_data['old_value']) < max_chars:
+            raise forms.ValidationError(_('Запрещается выполнять поиск включения, '
+                                          'если условие поиска содержит менее %s символов.' %
+                                          max_chars
+                                          ))
         return cleaned_data
+
+    def clean_field(self):
+        data = self.cleaned_data['field']
+        allowed = getattr(settings, '%s_ALLOWED_FOR_BULK_CHANGE' % HerbsAppConf.Meta.prefix.upper(),
+                          None)
+        if data.strip() not in allowed:
+            raise forms.ValidationError(_(u'Недопустимое имя поля. Допустимыми являются только поля:  ') + ','.join(allowed))
+        return data

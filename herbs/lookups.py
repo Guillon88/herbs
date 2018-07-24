@@ -13,7 +13,7 @@ def get_acronym(request):
     query = HerbAcronym.objects.filter(
         allowed_users__icontains=request.user.username)
     if query.exists():
-        return query[0]
+        return query[0] # TODO: only 1 acronym is accounted!!!
 
 
 NS = getattr(settings,
