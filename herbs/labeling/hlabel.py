@@ -740,13 +740,14 @@ class PDF_BRYOPHYTE(BARCODE):
             addind = 1
             mainind = 0
             for sp, auth, ir, iep, iauth, _note in allspecies:
-                if iauth:
-                    auth = ''
                 mainind += 1
                 self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
                                 self.goto(self._ln))
                 self.pdf.set_font('DejaVu', '', self._sfs)
                 spaw = self.pdf.get_string_width(auth)
+                if iauth:
+                    auth = ''
+                    spaw = -2
 
                 # Smart confertum and affinis printing...
                 sp_decomposed = list(map(lambda x: x.strip(), sp.split()))
