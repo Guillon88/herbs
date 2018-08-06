@@ -740,6 +740,8 @@ class PDF_BRYOPHYTE(BARCODE):
             addind = 1
             mainind = 0
             for sp, auth, ir, iep, iauth, _note in allspecies:
+                if iauth:
+                    auth = ''
                 mainind += 1
                 self.pdf.set_xy(BRYOPHYTE_LEFT_MARGIN,
                                 self.goto(self._ln))
